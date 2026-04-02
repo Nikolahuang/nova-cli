@@ -1,0 +1,119 @@
+// ============================================================================
+// File Tool Schemas - JSON schemas for file operation tools
+// ============================================================================
+
+export const readFileSchema = {
+  type: 'object' as const,
+  properties: {
+    filePath: {
+      type: 'string',
+      description: 'Absolute path to the file to read',
+    },
+    offset: {
+      type: 'number',
+      description: 'Line number to start reading from (1-based)',
+    },
+    limit: {
+      type: 'number',
+      description: 'Number of lines to read',
+    },
+    encoding: {
+      type: 'string',
+      description: 'File encoding (default: utf-8)',
+      default: 'utf-8',
+    },
+  },
+  required: ['filePath'],
+  additionalProperties: false,
+};
+
+export const writeFileSchema = {
+  type: 'object' as const,
+  properties: {
+    filePath: {
+      type: 'string',
+      description: 'Absolute path to the file to write',
+    },
+    content: {
+      type: 'string',
+      description: 'Content to write to the file',
+    },
+    createDirectories: {
+      type: 'boolean',
+      description: 'Create parent directories if they do not exist',
+      default: false,
+    },
+    encoding: {
+      type: 'string',
+      description: 'File encoding (default: utf-8)',
+      default: 'utf-8',
+    },
+  },
+  required: ['filePath', 'content'],
+  additionalProperties: false,
+};
+
+export const editFileSchema = {
+  type: 'object' as const,
+  properties: {
+    filePath: {
+      type: 'string',
+      description: 'Absolute path to the file to edit',
+    },
+    oldText: {
+      type: 'string',
+      description: 'The text to replace (must be unique in the file)',
+    },
+    newText: {
+      type: 'string',
+      description: 'The replacement text',
+    },
+    allOccurrences: {
+      type: 'boolean',
+      description: 'Replace all occurrences of oldText (default: false, replaces first only)',
+      default: false,
+    },
+    dryRun: {
+      type: 'boolean',
+      description: 'Preview the change without modifying the file',
+      default: false,
+    },
+  },
+  required: ['filePath', 'oldText', 'newText'],
+  additionalProperties: false,
+};
+
+export const listDirectorySchema = {
+  type: 'object' as const,
+  properties: {
+    dirPath: {
+      type: 'string',
+      description: 'Absolute path to the directory to list',
+    },
+    recursive: {
+      type: 'boolean',
+      description: 'List files recursively',
+      default: false,
+    },
+    includeHidden: {
+      type: 'boolean',
+      description: 'Include hidden files and directories',
+      default: false,
+    },
+    pattern: {
+      type: 'string',
+      description: 'Glob pattern to filter results',
+    },
+    depth: {
+      type: 'number',
+      description: 'Maximum depth for recursive listing',
+    },
+    limit: {
+      type: 'number',
+      description: 'Maximum number of entries to return (default: 500). Use smaller values for faster results.',
+      default: 500,
+    },
+  },
+  required: ['dirPath'],
+  additionalProperties: false,
+};

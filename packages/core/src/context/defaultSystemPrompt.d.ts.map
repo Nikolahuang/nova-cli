@@ -1,0 +1,1 @@
+{"version":3,"file":"defaultSystemPrompt.d.ts","sourceRoot":"","sources":["defaultSystemPrompt.ts"],"names":[],"mappings":"AAIA,MAAM,WAAW,mBAAmB;IAClC,gBAAgB,EAAE,MAAM,CAAC;IACzB,KAAK,EAAE,MAAM,CAAC;IACd,YAAY,EAAE,MAAM,CAAC;IACrB,EAAE,CAAC,EAAE,MAAM,CAAC;IACZ,+CAA+C;IAC/C,OAAO,CAAC,EAAE,OAAO,CAAC;CACnB;AAED,wBAAgB,iBAAiB,CAAC,OAAO,EAAE,mBAAmB,GAAG,MAAM,CAqBtE"}

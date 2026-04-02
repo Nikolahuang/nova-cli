@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+
+// Nova CLI Entry Point - Cross-platform launcher
+// Automatically uses tsx if available, falls back to direct node if compiled
+
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const mainScript = join(__dirname, 'nova.js');
+
+// Check if running from compiled dist
+const isCompiled = !existsSync(join(__dirname, '../src'));
+
+if (isCompiled) {
+  // Running compiled version
+  import(mainScript).catch((err) => {
+    console.error('Fatal error:', err.message);
+    process.exit(1);
+  });
+} else {
+  // Running from source, need tsx
+  const tsxPath = join(__dirname, '../node_modules/.bin/tsx');
+  const tsxCmd = existsSync(tsxPath + '.cmd') ? tsxPath + '.cmd' : tsxPath;
+  
+  const child = spawn(tsxCmd, [mainScript, ...process.argv.slice(2)], {
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+  
+  child.on('exit', (code) => {
+    process.exit(code ?? 0);
+  });
+}

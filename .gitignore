@@ -1,0 +1,98 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Credentials & Secrets
+credentials.json
+*.credentials
+*.key
+*.secret
+*.token
+api-key.txt
+secrets/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Testing
+coverage/
+.nyc_output/
+
+# Logs & Debug Files
+*.log
+nova-debug.log
+emitted.txt
+error.txt
+error_output.txt
+json_output.txt
+help_output.txt
+test-results.json
+
+# Temp files
+*.tmp
+*.temp
+*.cache
+
+# Session data
+sessions/
+*.session
+
+# Development files
+test-integration.js
+test-ui-components.ts
+test-tools.ts
+validate-agent-features.bat
+FINAL_TEST.bat
+tetris.js
+tetris-game.html
+fix_imports.js
+fix_imports.py
+read_pdf.js
+read_pdf.mjs
+read_pdf.py
+pdf_content.txt
+
+# Research & Documentation (archive)
+research_project/
+civil-engineering-cloud-claude-code-source-*/
+NOVA_CLI_用户命令操作手册.md
+iflow-vs-nova-gap-analysis.md
+novacli对话记录*.md
+
+# Example files (but keep the skill example)
+# Keep code-simplifier.md as example, remove others
+
+# Build artifacts
+turbo.json
+pnpm-lock.yaml
+
+# Published package
+publish/
+
+# Cache
+.turbo/
+
+# Test files
+test-*.js
+test-*.ts
+test-*.mjs
