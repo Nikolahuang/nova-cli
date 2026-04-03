@@ -27,7 +27,7 @@ Nova CLI 是一个强大的 AI 编程助手命令行工具，支持多种 AI 模
 #### 4. 安装 Nova CLI
 
 ```bash
-npm install -g @nova-cli/cli@latest
+npm install -g nova-ai-terminal@latest
 ```
 
 #### 5. 启动 Nova CLI

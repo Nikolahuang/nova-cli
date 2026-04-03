@@ -260,7 +260,7 @@ ENV NOVA_LOG_LEVEL=info
 
 COPY . /app
 WORKDIR /app
-RUN npm install -g nova-cli
+RUN npm install -g nova-ai-terminal@latest
 
 CMD ["nova", "-p", "Hello World"]
 ```
@@ -971,8 +971,8 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Setup Nova
-        run: npm install -g nova-cli
-        
+        run: npm install -g nova-ai-terminal@latest
+
       - name: Run Code Review
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

@@ -32,7 +32,7 @@ nova
 - **Solution**: Make sure Node.js >= 18.0.0 is installed and global npm bin is in your PATH
 
 **Problem**: Permission denied when installing globally
-- **Solution**: Use `sudo npm install -g @nova-cli/cli` on Linux/macOS, or run PowerShell as Administrator on Windows
+- **Solution**: Use `sudo npm install -g nova-ai-terminal@latest` on Linux/macOS, or run PowerShell as Administrator on Windows
 
 ### API Key Issues
 

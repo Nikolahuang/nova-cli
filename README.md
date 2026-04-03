@@ -25,7 +25,7 @@ Nova CLI is a production-grade terminal AI agent that combines the best ideas fr
 ### 4. 安装 Nova CLI
 
 ```bash
-npm install -g @nova-cli/cli@latest
+npm install -g nova-ai-terminal@latest
 ```
 
 ### 5. 启动 Nova CLI
