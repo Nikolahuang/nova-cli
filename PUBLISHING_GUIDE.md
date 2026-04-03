@@ -168,7 +168,7 @@ npm view @nova-cli/cli
 
 # 在新目录测试安装
 cd /tmp
-npm install -g nova-ai-terminal@latest
+npm install -g nova-terminal-ai@latest
 nova --version
 ```
 

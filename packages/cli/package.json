@@ -1,6 +1,6 @@
 {
-  "name": "nova-ai-terminal",
-  "version": "0.3.3",
+  "name": "nova-terminal-ai",
+  "version": "0.3.4",
   "description": "Nova CLI - Next-generation AI-powered terminal assistant",
   "type": "module",
   "bin": {

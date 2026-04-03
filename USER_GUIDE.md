@@ -39,7 +39,7 @@
 
 2. **安装 Nova CLI**
    ```bash
-   npm install -g nova-ai-terminal@latest
+   npm install -g nova-terminal-ai@latest
 
    # 或从源码安装
    git clone https://github.com/your-org/nova-cli.git

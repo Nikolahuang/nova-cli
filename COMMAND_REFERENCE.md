@@ -260,7 +260,7 @@ ENV NOVA_LOG_LEVEL=info
 
 COPY . /app
 WORKDIR /app
-RUN npm install -g nova-ai-terminal@latest
+RUN npm install -g nova-terminal-ai@latest
 
 CMD ["nova", "-p", "Hello World"]
 ```
@@ -971,7 +971,7 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Setup Nova
-        run: npm install -g nova-ai-terminal@latest
+        run: npm install -g nova-ai-cli@latest
 
       - name: Run Code Review
         env:
