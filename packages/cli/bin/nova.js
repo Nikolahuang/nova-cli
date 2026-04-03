@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
 // Nova CLI Entry Point
-// Uses tsx to run TypeScript directly (handles ESM + cross-package imports)
 
-import { NovaApp } from '../src/startup/NovaApp.ts';
+import { NovaApp } from '../dist/packages/cli/src/startup/NovaApp.js';
 
 const app = new NovaApp();
 app.run().catch((err) => {
