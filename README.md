@@ -384,7 +384,8 @@ Separation between `core` (library) and `cli` (application) allows:
 | Streaming | Yes | Yes | Yes |
 | Extensible | Yes (extensions) | No | Limited |
 | Open source | Yes | No | Yes |
-
+## 友链认可
+[LinuxDO](https://linux.do/) 众多技术爱好者的聚集地
 ## License
 
 MIT
