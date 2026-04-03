@@ -4,6 +4,22 @@
 
 import path from 'node:path';
 import os from 'node:os';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+// Use createRequire to reliably resolve package.json from the installed location
+const require = createRequire(import.meta.url);
+let packageJson: { version: string };
+try {
+  // Try to resolve from the module's own package.json
+  packageJson = require('../../package.json');
+} catch {
+  // Fallback: try to find it relative to the dist output
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const packageJsonPath = path.resolve(__dirname, '../../../../../package.json');
+  packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+}
 import { ConfigManager } from '../../../core/src/config/ConfigManager.js';
 import { AuthManager } from '../../../core/src/auth/AuthManager.js';
 import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.js';
@@ -127,7 +143,7 @@ export class NovaApp {
         return;
       }
       if (args.command === 'version') {
-        console.log('nova-cli v0.1.0');
+        console.log(`nova-cli v${packageJson.version}`);
         return;
       }
       if (args.command === 'help') {

@@ -3,6 +3,23 @@
 // ============================================================================
 
 import chalk from 'chalk';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+// Use createRequire to reliably resolve package.json from the installed location
+const require = createRequire(import.meta.url);
+let packageJson: { version: string };
+try {
+  // Try to resolve from the module's own package.json (relative to src/ui)
+  packageJson = require('../../../package.json');
+} catch {
+  // Fallback: try to find it relative to the dist output
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const packageJsonPath = path.resolve(__dirname, '../../../../package.json');
+  packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+}
 import type { SessionInfo, NovaConfig } from '../../../core/src/types/config.js';
 
 import { StatusBar } from './components/StatusBar.js';
@@ -43,7 +60,7 @@ export class ModernReplUI {
     this.errorPanel = new ErrorPanel({ compact: this.options.compactMode });
     this.quickActions = new QuickActions(this.session);
 
-    console.log(chalk.bgGreen.black.bold(' NOVA CLI v0.1.0 '));
+    console.log(chalk.bgGreen.black.bold(` NOVA CLI v${packageJson.version} `));
     console.log(chalk.green('-'.repeat(50)));
     console.log('');
   }
