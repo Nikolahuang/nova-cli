@@ -31,6 +31,10 @@ export const fileProcessorSchema = z.object({
     
     outputPath: z.string().optional().describe('输出文件路径'),
     
+    allowExternalAccess: z.boolean().optional().default(false).describe('Allow access to files outside working directory'),
+    
+    additionalAllowedPaths: z.array(z.string()).optional().describe('Additional allowed paths for external access'),
+    
     options: z.object({
         // PDF选项
         pdf: z.object({

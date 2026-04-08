@@ -63,10 +63,16 @@ export class AuthManager {
   /** Set credentials for a provider */
   async setCredentials(entry: { provider: string; apiKey: string; baseUrl?: string; organizationId?: string }): Promise<void> {
     const existing = this.credentials.get(entry.provider);
+    // Clean up baseUrl: remove trailing slashes and common endpoint suffixes
+    let baseUrl = entry.baseUrl;
+    if (baseUrl) {
+      baseUrl = baseUrl.replace(/\/+$/, '');
+      baseUrl = baseUrl.replace(/\/(chat\/completions|completions|embeddings|v1\/chat\/completions)$/i, '');
+    }
     const credential: CredentialEntry = {
       provider: entry.provider,
       apiKey: entry.apiKey,
-      baseUrl: entry.baseUrl,
+      baseUrl,
       organizationId: entry.organizationId,
       createdAt: existing?.createdAt || Date.now(),
       updatedAt: Date.now(),

@@ -89,8 +89,10 @@ export class ToolCallStatusDisplay {
     this.options = {
       maxWidth: options.maxWidth ?? (process.stdout.columns || 80) - 4,
       showInput: options.showInput ?? true,
-      showResult: options.showResult ?? false,
-      maxErrorLength: options.maxErrorLength ?? 100,
+      showResult: options.showResult ?? true, // Enhanced default to show results
+      maxErrorLength: options.maxErrorLength ?? 150, // Increased for better error visibility
+      showDuration: options.showDuration ?? true, // New option for duration display
+      enhancedVisuals: options.enhancedVisuals ?? true, // New option for enhanced styling
     };
   }
 
@@ -219,7 +221,7 @@ export class ToolCallStatusDisplay {
   }
 
   /**
-   * Render a completed tool call
+   * Render a completed tool call with enhanced visuals
    */
   private renderComplete(info: ToolCallInfo): void {
     this.stopSpinner();
@@ -234,14 +236,16 @@ export class ToolCallStatusDisplay {
     process.stdout.write('\r' + ' '.repeat(this.options.maxWidth) + '\r');
 
     const icon = info.status === 'success' ? C.success(BOX.check) : C.error(BOX.cross);
+    const statusColor = info.status === 'success' ? 'success' : 'error';
     const durationColor = info.status === 'success' ? C.successDim : C.errorDim;
-    
-    // Main line
+
+    // Enhanced main line with better spacing and visual hierarchy
     console.log(
       '  ' + icon + ' ' +
       (info.status === 'success' ? C.cyan(info.name) : C.error(info.name)) +
       C.dim(` #${idx.toString().padStart(2, '0')}`) +
-      ' ' + durationColor(`(${durationStr})`)
+      (this.options.showDuration ? ' ' + durationColor(`(${durationStr})`) : '') +
+      (this.options.enhancedVisuals ? ' ' + C.dim('✓') : '')
     );
 
     // Show error details if failed
@@ -251,8 +255,13 @@ export class ToolCallStatusDisplay {
 
     // Show result preview if enabled and successful
     if (info.status === 'success' && this.options.showResult && info.result) {
-      const preview = info.result.slice(0, 60).replace(/\n/g, ' ');
-      console.log(C.dim(`     └─ ${preview}${info.result.length > 60 ? '...' : ''}`));
+      const preview = info.result.slice(0, 80).replace(/\n/g, ' ');
+      console.log(C.dim(`     └─ ${preview}${info.result.length > 80 ? '...' : ''}`));
+
+      // Add success indicator for enhanced visuals
+      if (this.options.enhancedVisuals) {
+        console.log(C.successDim('     ↑ Success!'));
+      }
     }
   }
 

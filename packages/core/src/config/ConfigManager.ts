@@ -950,6 +950,8 @@ const DEFAULT_CONFIG: NovaConfig = {
     ignorePatterns: ['node_modules/**', '.git/**', 'dist/**', 'build/**', '*.log', '.env', '.env.local'],
     maxFileSize: 10 * 1024 * 1024,
     maxBatchSize: 100,
+    allowExternalAccess: false,
+    additionalAllowedPaths: [],
   },
   telemetry: {
     enabled: false,
@@ -1109,6 +1111,44 @@ export class ConfigManager {
   registerProvider(providerName: string, providerConfig: ModelProviderConfig): boolean {
     if (!this.config) return false;
     this.config.models.providers[providerName] = providerConfig;
+    return true;
+  }
+
+  /**
+   * Remove a provider and clean up related config.
+   * Returns true if the provider was found and removed.
+   */
+  removeProvider(providerName: string): boolean {
+    if (!this.config) return false;
+    if (!this.config.models.providers[providerName]) return false;
+
+    // Delete provider and all its models
+    delete this.config.models.providers[providerName];
+
+    // Clean up aliases that reference this provider's models (format: provider/modelId)
+    if (this.config.models.aliases) {
+      for (const [alias, target] of Object.entries(this.config.models.aliases)) {
+        if (target.startsWith(providerName + '/')) {
+          delete this.config.models.aliases[alias];
+        }
+      }
+    }
+
+    // If defaultModel references this provider, reset to a safe default
+    const currentDefault = this.config.core.defaultModel;
+    if (currentDefault.startsWith(providerName + '/')) {
+      // Try to find another available provider to fall back to
+      const availableProviders = Object.keys(this.config.models.providers);
+      if (availableProviders.length > 0) {
+        const fallbackProvider = availableProviders[0];
+        const fallbackModels = this.config.models.providers[fallbackProvider].models;
+        const fallbackModelId = Object.keys(fallbackModels)[0];
+        this.config.core.defaultModel = `${fallbackProvider}/${fallbackModelId}`;
+      } else {
+        this.config.core.defaultModel = 'ollama/llama3.1'; // ultimate fallback
+      }
+    }
+
     return true;
   }
 

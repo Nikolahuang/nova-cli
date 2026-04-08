@@ -4,11 +4,42 @@
 // ============================================================================
 
 import fs from 'fs/promises';
-import path from 'path';
+import path from 'node:path';
 import { PDFDocument } from 'pdf-lib';
-import { Document, Paragraph, TextRun, Packer } from 'docx';
 import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
+
+// Storage interface for localStorage mock
+interface Storage {
+    length: number;
+    clear(): void;
+    getItem(key: string): string | null;
+    key(index: number): string | null;
+    removeItem(key: string): void;
+    setItem(key: string, value: string): void;
+}
+
+// Lazy import docx to avoid localStorage warning in Node.js
+// The docx package tries to access localStorage which doesn't exist in Node.js
+let _docx: typeof import('docx') | null = null;
+async function getDocx() {
+    if (!_docx) {
+        // Mock localStorage for Node.js environment
+        if (typeof globalThis.localStorage === 'undefined') {
+            const storage: Record<string, string> = {};
+            globalThis.localStorage = {
+                getItem: (key: string) => storage[key] ?? null,
+                setItem: (key: string, value: string) => { storage[key] = value; },
+                removeItem: (key: string) => { delete storage[key]; },
+                clear: () => { for (const k in storage) delete storage[k]; },
+                get length() { return Object.keys(storage).length; },
+                key: (i: number) => Object.keys(storage)[i] ?? null,
+            } as Storage;
+        }
+        _docx = await import('docx');
+    }
+    return _docx;
+}
 
 export interface FileProcessResult {
     success: boolean;
@@ -270,13 +301,14 @@ export class FileProcessor {
      */
     async createWord(content: string, outputPath: string): Promise<FileProcessResult> {
         try {
-            const doc = new Document({
+            const docx = await getDocx();
+            const doc = new docx.Document({
                 sections: [{
                     properties: {},
                     children: [
-                        new Paragraph({
+                        new docx.Paragraph({
                             children: [
-                                new TextRun({
+                                new docx.TextRun({
                                     text: content,
                                     font: "Arial"
                                 })
@@ -286,7 +318,7 @@ export class FileProcessor {
                 }]
             });
             
-            const buffer = await Packer.toBuffer(doc);
+            const buffer = await docx.Packer.toBuffer(doc);
             await this.writeFile(outputPath, buffer);
             
             return {

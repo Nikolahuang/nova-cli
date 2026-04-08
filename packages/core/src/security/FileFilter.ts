@@ -18,6 +18,10 @@ export interface FileFilterConfig {
   forbiddenPaths?: string[];
   /** Working directory (for relative path resolution) */
   workingDirectory: string;
+  /** Allow access to files outside working directory */
+  allowExternalAccess?: boolean;
+  /** Additional allowed paths outside working directory */
+  additionalAllowedPaths?: string[];
 }
 
 export class FileFilter {
@@ -27,6 +31,8 @@ export class FileFilter {
   private maxBatchSize: number;
   private forbiddenPaths: Set<string>;
   private workingDirectory: string;
+  private allowExternalAccess: boolean;
+  private additionalAllowedPaths: Set<string>;
 
   constructor(config: FileFilterConfig) {
     this.ignorePatterns = config.ignorePatterns;
@@ -37,6 +43,10 @@ export class FileFilter {
       (config.forbiddenPaths || []).map((p) => path.resolve(p))
     );
     this.workingDirectory = config.workingDirectory;
+    this.allowExternalAccess = config.allowExternalAccess || false;
+    this.additionalAllowedPaths = new Set(
+      (config.additionalAllowedPaths || []).map((p) => path.resolve(p))
+    );
   }
 
   /** Check if a file path is allowed */
@@ -50,9 +60,14 @@ export class FileFilter {
       }
     }
 
-    // Check if it's within the working directory
-    if (!resolved.startsWith(this.workingDirectory) && !path.isAbsolute(resolved)) {
-      return { allowed: false, reason: `Path is outside the working directory` };
+    // Check if it's within the working directory or allowed paths
+    const isInWorkingDir = resolved.startsWith(this.workingDirectory);
+    const isInAdditionalPaths = Array.from(this.additionalAllowedPaths).some(
+      allowedPath => resolved.startsWith(allowedPath) || resolved === allowedPath
+    );
+
+    if (!isInWorkingDir && !isInAdditionalPaths && !this.allowExternalAccess) {
+      return { allowed: false, reason: `Path is outside the working directory. To allow external access, set allowExternalAccess to true or add the path to additionalAllowedPaths.` };
     }
 
     return { allowed: true };

@@ -171,6 +171,10 @@ export interface FileFilterConfig {
   maxBatchSize?: number;
   /** Directories to never access */
   forbiddenPaths?: string[];
+  /** Allow access to files outside working directory */
+  allowExternalAccess?: boolean;
+  /** Additional allowed paths outside working directory */
+  additionalAllowedPaths?: string[];
 }
 
 export interface SecurityConfig {

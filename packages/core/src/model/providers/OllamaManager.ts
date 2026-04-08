@@ -140,8 +140,19 @@ export class OllamaManager {
 
   /** Delete a locally installed model */
   async deleteModel(name: string): Promise<void> {
-    const res = await this.request<{ status: string }>('/api/delete', { name }, 'DELETE');
-    // Some Ollama versions return empty body for DELETE
+    // Ollama DELETE API expects the model name in the URL query string
+    const url = `${this.baseUrl}/api/delete?name=${encodeURIComponent(name)}`;
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Ollama delete failed: ${res.status} ${text || res.statusText}`);
+    }
+    // DELETE endpoint returns empty body
   }
 
   /**

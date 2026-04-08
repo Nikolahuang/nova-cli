@@ -1,13 +1,14 @@
-@echo off
-setlocal EnableDelayedExpansion
+@ECHO off
+SETLOCAL
 
-set "NOVA_ROOT=%~dp0"
-set "LOADER_PATH=%NOVA_ROOT%node_modules\tsx\dist\loader.mjs"
+SET "NOVA_ROOT=%~dp0"
 
-:: Convert Windows path to file:// URL for ESM loader
-:: Replace \ with / and add file:/// prefix
-set "LOADER_URL=file:///%LOADER_PATH:\=/%"
-:: Remove any double slashes (except file://)
-set "LOADER_URL=!LOADER_URL:file:////=file:///-!"
+REM Use tsx directly to avoid --import warnings in Node.js 25+
+SET "TSX_PATH=%NOVA_ROOT%node_modules\.bin\tsx.cmd"
+IF NOT EXIST "%TSX_PATH%" (
+    SET "TSX_PATH=%NOVA_ROOT%node_modules\.bin\tsx"
+)
 
-node --import "!LOADER_URL!" "!NOVA_ROOT!packages\cli\bin\nova.js" %*
+REM Pass --require to node via tsx's --import flag workaround
+REM tsx internally uses node, so we need to ensure localStorage mock is loaded first
+"%TSX_PATH%" --require "%NOVA_ROOT%scripts\localStorageMock.js" "%NOVA_ROOT%packages\cli\bin\nova.js" %*

@@ -2,15 +2,36 @@ import { glob } from 'glob';
 import path from 'node:path';
 import type { ToolHandler, ToolHandlerInput, ToolHandlerOutput } from '../../types/tools.js';
 import { ToolError } from '../../types/errors.js';
+import { FileFilter } from '../../security/FileFilter.js';
 
 export const searchFileHandler: ToolHandler = async (input: ToolHandlerInput): Promise<ToolHandlerOutput> => {
-  const { pattern, directory, recursive = true, caseSensitive = false, excludePatterns } = input.params as {
+  const { pattern, directory, recursive = true, caseSensitive = false, excludePatterns, allowExternalAccess = false, additionalAllowedPaths = [] } = input.params as {
     pattern: string;
     directory: string;
     recursive?: boolean;
     caseSensitive?: boolean;
     excludePatterns?: string[];
+    allowExternalAccess?: boolean;
+    additionalAllowedPaths?: string[];
   };
+
+  // Create a temporary FileFilter to validate directory access if external access is not allowed
+  let fileFilter: FileFilter | undefined;
+  if (!allowExternalAccess) {
+    fileFilter = new FileFilter({
+      ignorePatterns: ['node_modules/**', '.git/**', 'dist/**', 'build/**', '*.log', '.env', '.env.local'],
+      workingDirectory: process.cwd(),
+      maxFileSize: 10 * 1024 * 1024,
+      maxBatchSize: 100,
+      allowExternalAccess: allowExternalAccess,
+      additionalAllowedPaths: additionalAllowedPaths,
+    });
+    
+    const accessCheck = fileFilter.isAllowed(directory);
+    if (!accessCheck.allowed) {
+      throw new ToolError(`Directory access denied: ${accessCheck.reason}`, 'search_file');
+    }
+  }
 
   const resolvedDir = path.resolve(directory);
 
@@ -36,8 +57,8 @@ export const searchFileHandler: ToolHandler = async (input: ToolHandlerInput): P
 
     if (files.length === 0) {
       return {
-        content: `No files matching "${pattern}" found in ${resolvedDir}`,
-        metadata: { pattern, directory: resolvedDir, count: 0 },
+        content: `No files matching "${pattern}" found in ${resolvedDir}${allowExternalAccess ? '' : '\n\nNote: External file access is disabled by default for security.'}`,
+        metadata: { pattern, directory: resolvedDir, count: 0, allowExternalAccess, additionalAllowedPaths },
       };
     }
 
@@ -53,6 +74,8 @@ export const searchFileHandler: ToolHandler = async (input: ToolHandlerInput): P
         directory: resolvedDir,
         count: files.length,
         matches: files,
+        allowExternalAccess,
+        additionalAllowedPaths,
       },
     };
   } catch (err) {

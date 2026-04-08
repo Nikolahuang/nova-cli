@@ -70,7 +70,7 @@ export interface ReplOptions {
   limit?: number;
 }
 
-type InteractionMode = 'auto' | 'plan' | 'ask';
+type InteractionMode = 'auto' | 'smart' | 'edits' | 'plan' | 'ask';
 
 interface Message {
   id: string;
@@ -122,11 +122,15 @@ const BOX = {
   spinner: ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'],
 };
 
-const MODE_LABELS = {
-  auto: { label: 'AUTO', color: chalk.green.bold, description: 'Full autonomous' },
-  plan: { label: 'PLAN', color: chalk.yellow.bold, description: 'Plan first' },
-  ask:  { label: 'ASK',  color: chalk.cyan.bold, description: 'Answer only' },
+const MODE_LABELS: Record<InteractionMode, { label: string; color: any; description: string; approvalMode: string }> = {
+  auto:  { label: 'AUTO',  color: chalk.green.bold,  description: 'Full autonomous - no approval needed',       approvalMode: 'yolo' },
+  smart: { label: 'SMART', color: chalk.blue.bold,   description: 'Smart approval - auto low-risk, ask high-risk', approvalMode: 'smart' },
+  edits: { label: 'EDITS', color: chalk.magenta.bold,description: 'Auto-approve file edits, ask for shell/exec', approvalMode: 'accepting_edits' },
+  plan:  { label: 'PLAN',  color: chalk.yellow.bold, description: 'Plan first, then confirm each action',       approvalMode: 'plan' },
+  ask:   { label: 'ASK',   color: chalk.cyan.bold,   description: 'Answer only, no file changes',              approvalMode: 'default' },
 };
+
+const MODES: InteractionMode[] = ['auto', 'smart', 'edits', 'plan', 'ask'];
 
 // ============================================================================
 // InkBasedRepl Class
@@ -144,6 +148,7 @@ export class InkBasedRepl {
   private contextCompressor?: any;
   private mcpManager?: McpManager;
   private skillRegistry?: SkillRegistry;
+  private _pendingSkillInject: any = null;
   private sessionId: SessionId | null = null;
   private restoreSessionId?: SessionId;
 
@@ -240,6 +245,8 @@ export class InkBasedRepl {
     this.state = {
       model: this.modelClient.getModel(),
       mode: (this.config.core.defaultApprovalMode === 'yolo' ? 'auto' : 
+             this.config.core.defaultApprovalMode === 'smart' ? 'smart' :
+             this.config.core.defaultApprovalMode === 'accepting_edits' ? 'edits' :
              this.config.core.defaultApprovalMode === 'plan' ? 'plan' : 'ask') as InteractionMode,
       contextUsage: 0,
       sessionId: 'new',
@@ -477,7 +484,7 @@ export class InkBasedRepl {
       case 'exit':
       case 'q':
         if (this.sessionId) this.sessionManager.persist(this.sessionId);
-        this.activeCursor.stop();
+        if (this.activeCursor) this.activeCursor.stop();
         console.log(chalk.dim('Goodbye!'));
         process.exit(0);
 
@@ -496,15 +503,17 @@ export class InkBasedRepl {
         break;
 
       case 'mode':
-        if (arg && ['auto', 'plan', 'ask'].includes(arg)) {
+        if (arg && MODES.includes(arg as InteractionMode)) {
           this.state.mode = arg as InteractionMode;
-          console.log(chalk.dim(`  Mode: ${arg}`));
+          const info = MODE_LABELS[this.state.mode];
+          console.log(chalk.dim('  Mode: ') + info.color(info.label) + chalk.dim(` — ${info.description}`));
+          console.log(chalk.dim(`  Approval: `) + chalk.hex('#3B82F6')(info.approvalMode));
         } else {
           // Cycle mode
-          const modes: InteractionMode[] = ['auto', 'plan', 'ask'];
-          const idx = modes.indexOf(this.state.mode);
-          this.state.mode = modes[(idx + 1) % 3] as InteractionMode;
-          console.log(chalk.dim(`  Mode: ${this.state.mode}`));
+          const idx = MODES.indexOf(this.state.mode);
+          this.state.mode = MODES[(idx + 1) % MODES.length] as InteractionMode;
+          const info = MODE_LABELS[this.state.mode];
+          console.log(chalk.dim('  Mode: ') + info.color(info.label) + ' ' + chalk.dim('·') + ' ' + chalk.dim(info.description));
         }
         break;
 
@@ -549,12 +558,12 @@ export class InkBasedRepl {
     console.log(chalk.gray('  /init            Analyze project and initialize context'));
     console.log(chalk.gray('  /quit, /q        Exit Nova CLI'));
     console.log(chalk.gray('  /clear           Clear conversation'));
-    console.log(chalk.gray('  /mode            Cycle mode (AUTO → PLAN → ASK)'));
+    console.log(chalk.gray('  /mode            Cycle mode (AUTO → SMART → EDITS → PLAN → ASK)'));
     console.log(chalk.gray('  /model           Switch model'));
     console.log(chalk.gray('  /ollama          Ollama status'));
     console.log(chalk.gray('  /status          Session status'));
     console.log(chalk.gray('  /mcp             MCP servers'));
-    console.log(chalk.gray('  /skills          Available skills'));
+    console.log(chalk.gray('  /skills          Available skills (server/author/user)'));
     console.log(chalk.gray('  /thinking        Toggle thinking display'));
     console.log('');
     console.log(chalk.gray('  @file            Inject file content'));
@@ -821,13 +830,32 @@ export class InkBasedRepl {
     }
 
     // Parse command arguments
-    const args = arg.trim().split(/\s+/);
-    const subcommand = args[0]?.toLowerCase();
+    const parts = arg.trim().split(/\s+/);
+    const mode = parts[0]?.toLowerCase();
+    const rest = parts.slice(1).join(' ');
 
-    if (subcommand === 'add') {
+    // Mode 1: /skills server — Browse and install skills from GitHub repo
+    if (mode === 'server') {
+      await this.handleSkillsServerCommand();
+      return;
+    }
+
+    // Mode 2: /skills author select — Browse pre-downloaded skills from SkillsHub
+    if (mode === 'author' || mode === 'authorSkills') {
+      await this.handleSkillsAuthorCommand();
+      return;
+    }
+
+    // Mode 3: /skills user — Install skill from custom file/zip path
+    if (mode === 'user') {
+      await this.handleSkillsUserCommand();
+      return;
+    }
+
+    if (mode === 'add') {
       // Handle /skills add <global|local> [file-path]
-      const scope = args[1]?.toLowerCase();
-      const filePath = args.slice(2).join(' ').trim();
+      const scope = parts[1]?.toLowerCase();
+      const filePath = parts.slice(2).join(' ').trim();
 
       if (!scope || (scope !== 'global' && scope !== 'local')) {
         await this.handleAddSkillCommand('local');
@@ -843,14 +871,19 @@ export class InkBasedRepl {
       return;
     }
 
-    if (subcommand === 'list') {
-      // Handle /skills list
+    if (mode === 'list' || !mode) {
+      // Handle /skills list (or bare /skills)
       try {
         const skills = await this.skillRegistry.list();
         const localSkills = this.state.activeSkills || [];
 
         if (skills.length === 0 && localSkills.length === 0) {
-          console.log(chalk.dim('  No skills installed. Use "/skills add" to add skills from local files.'));
+          console.log(chalk.dim('  No skills found.'));
+          console.log(chalk.dim('  Add SKILL.md files to ~/.nova/skills/ to create skills.'));
+          console.log('');
+          console.log(chalk.dim('  /skills server           — browse & install from GitHub'));
+          console.log(chalk.dim('  /skills author select    — browse local SkillsHub'));
+          console.log(chalk.dim('  /skills user             — install from file/zip path'));
           return;
         }
 
@@ -860,76 +893,433 @@ export class InkBasedRepl {
 
         // Show global skills
         if (skills.length > 0) {
-          console.log(chalk.hex('#7C3AED').bold('  Global Skills:'));
-          console.log('');
           skills.forEach(skill => {
-            console.log(chalk.white(`  • ${skill.metadata.name}`));
-            console.log(chalk.dim(`    ${skill.metadata.description}`));
-            console.log('');
+            const m = skill.metadata;
+            const autoTag = m.autoGenerated ? chalk.dim(' [auto]') : '';
+            const tags = m.tags.length > 0 ? chalk.dim(` (${m.tags.slice(0, 3).join(', ')})`) : '';
+            console.log(chalk.white(`  • ${m.name}${autoTag}${tags}`));
+            console.log(chalk.dim(`    ${m.description}`));
           });
         }
 
         // Show local skills (current session)
         if (localSkills.length > 0) {
-          console.log(chalk.hex('#7C3AED').bold('  Local Skills (Current Session):'));
+          console.log('');
+          console.log(chalk.hex('#7C3AED').bold('  Session Skills:'));
           console.log('');
           localSkills.forEach(skill => {
             console.log(chalk.white(`  • ${skill.name}`));
             console.log(chalk.dim(`    ${skill.description}`));
-            console.log('');
           });
         }
+
+        console.log('');
+        console.log(chalk.dim(`  ${skills.length + localSkills.length} skill${(skills.length + localSkills.length) !== 1 ? 's' : ''} available`));
+        console.log(chalk.dim('  /skills use <name>       — inject skill into next message'));
+        console.log(chalk.dim('  /skills server           — browse & install from GitHub'));
+        console.log(chalk.dim('  /skills author select    — browse local SkillsHub'));
+        console.log(chalk.dim('  /skills user             — install from file/zip path'));
       } catch (error) {
         console.log(chalk.red(`  Error loading skills: ${(error as Error).message}`));
       }
       return;
     }
 
-    if (subcommand === 'rm') {
-      // Handle /skills rm <skill-name>
-      const skillName = args[1]?.toLowerCase();
+    if (mode === 'info' && rest) {
+      const skill = await this.skillRegistry.get(rest);
+      if (!skill) { console.log(chalk.red(`  Skill "${rest}" not found.`)); return; }
+      const m = skill.metadata;
+      console.log('');
+      console.log(chalk.hex('#7C3AED').bold(`  ${m.name}`));
+      console.log(chalk.dim(`  Description: ${m.description}`));
+      console.log(chalk.dim(`  Version: ${m.version}`));
+      if (m.author) console.log(chalk.dim(`  Author: ${m.author}`));
+      if (m.tags.length > 0) console.log(chalk.dim(`  Tags: ${m.tags.join(', ')}`));
+      console.log('');
+      const preview = skill.content.split('\n').slice(0, 10).join('\n');
+      console.log(chalk.dim(preview));
+      if (skill.content.split('\n').length > 10) console.log(chalk.dim('  ...'));
+      return;
+    }
 
+    if (mode === 'use' && rest) {
+      const skill = await this.skillRegistry.get(rest);
+      if (!skill) { console.log(chalk.red(`  Skill "${rest}" not found.`)); return; }
+      this._pendingSkillInject = skill;
+      console.log(chalk.green(`  ✓ Skill "${rest}" will be injected into your next message.`));
+      return;
+    }
+
+    if (mode === 'rm') {
+      const skillName = rest;
       if (!skillName) {
         console.log(chalk.yellow('  Usage: /skills rm <skill-name>'));
         console.log(chalk.dim('  Example: /skills rm code-simplifier'));
         return;
       }
-
       await this.handleRemoveSkillCommand(skillName);
       return;
     }
 
-    // Default behavior: interactive skill selection or specific skill
-    if (!arg) {
-      // Interactive skill selection
-      try {
-        const skills = await this.skillRegistry.list();
-        if (skills.length === 0) {
-          console.log(chalk.dim('  No skills installed. Use "/skills add" to add skills from local files.'));
-          return;
-        }
-
-        const skillItems = skills.map(skill => ({
-          name: skill.metadata.name,
-          description: skill.metadata.description,
-        }));
-
-        const selectedSkill = await selectSkillInteractive(skillItems);
-
-        if (selectedSkill) {
-          console.log(chalk.green(`  ✓ Selected skill: ${selectedSkill}`));
-          console.log(chalk.dim('  Note: Skill injection not yet implemented in interactive mode'));
-        } else {
-          console.log(chalk.dim('  Skill selection cancelled'));
-        }
-      } catch (error) {
-        console.log(chalk.red(`  Error loading skills: ${(error as Error).message}`));
-      }
-    } else {
-      // Specific skill requested
-      console.log(chalk.green(`  ✓ Selected skill: ${arg}`));
-      console.log(chalk.dim('  Note: Skill injection not yet implemented in interactive mode'));
+    if (mode === 'install') {
+      await this.handleSkillsInstall(rest);
+      return;
     }
+
+    // Default: unknown subcommand
+    console.log(chalk.yellow(`  Unknown skills command.`));
+    console.log(chalk.dim('  Usage: /skills [list|use|info|server|author|user|install|add|rm]'));
+  }
+
+  // ========================================================================
+  // /skills server — Browse & install skills from GitHub
+  // ========================================================================
+
+  private async handleSkillsServerCommand(): Promise<void> {
+    const { default: fetch } = await import('node-fetch');
+    const SKILLS_REPO = 'daymade/claude-code-skills';
+    const API_URL = `https://api.github.com/repos/${SKILLS_REPO}/contents`;
+
+    console.log('');
+    console.log(chalk.hex('#7C3AED').bold('  Skills Marketplace — GitHub'));
+    console.log(chalk.dim(`  Fetching skills from: github.com/${SKILLS_REPO}`));
+    console.log(chalk.dim('  Connecting...'));
+
+    try {
+      const response = await fetch(API_URL, {
+        headers: { 'Accept': 'application/vnd.github.v3+json' },
+        timeout: 15000,
+      } as any);
+
+      if (!response.ok) {
+        throw new Error(`GitHub API returned ${response.status}`);
+      }
+
+      const contents = await response.json() as Array<{ name: string; type: string; path: string; download_url: string }>;
+      const folders = contents.filter(c => c.type === 'dir' && !c.name.startsWith('.'));
+
+      if (folders.length === 0) {
+        console.log(chalk.yellow('  No skill folders found in repository.'));
+        return;
+      }
+
+      // Fetch each folder's SKILL.md to get description
+      console.log(chalk.dim('  Loading skill descriptions...'));
+      const skillsInfo: Array<{ name: string; description: string }> = [];
+
+      const batchSize = 5;
+      for (let i = 0; i < folders.length; i += batchSize) {
+        const batch = folders.slice(i, i + batchSize);
+        const results = await Promise.allSettled(
+          batch.map(async (folder) => {
+            const skillUrl = `https://api.github.com/repos/${SKILLS_REPO}/contents/${folder.name}/SKILL.md`;
+            const resp = await fetch(skillUrl, {
+              headers: { 'Accept': 'application/vnd.github.v3+json' },
+              timeout: 10000,
+            } as any);
+            if (!resp.ok) return { name: folder.name, description: '' };
+            const data = await resp.json() as { content: string; encoding: string };
+            if (data.encoding === 'base64') {
+              const content = Buffer.from(data.content, 'base64').toString('utf-8');
+              const descMatch = content.match(/description:\s*(.+)/);
+              return { name: folder.name, description: descMatch ? descMatch[1].trim() : '' };
+            }
+            return { name: folder.name, description: '' };
+          })
+        );
+        for (const r of results) {
+          if (r.status === 'fulfilled') skillsInfo.push(r.value);
+        }
+      }
+
+      // Display interactive selection
+      console.log('');
+      console.log(chalk.hex('#7C3AED').bold(`  ${skillsInfo.length} skills available:`));
+      console.log(chalk.dim('  Use arrow keys to navigate, Enter to install, Esc to cancel'));
+      console.log('');
+
+      const selected = await selectSkillInteractive(
+        skillsInfo.map(s => ({ name: s.name, description: s.description }))
+      );
+
+      if (!selected) {
+        console.log(chalk.dim('  Cancelled.'));
+        return;
+      }
+
+      // Install the selected skill
+      console.log('');
+      console.log(chalk.dim(`  Installing "${selected}" from GitHub...`));
+      const { SkillInstaller } = await import('../../../core/src/extensions/SkillInstaller.js');
+      const installer = new SkillInstaller();
+      const installed = await installer.install({
+        source: `https://github.com/${SKILLS_REPO}`,
+        skills: [selected],
+        force: true,
+      });
+
+      if (installed.length > 0) {
+        console.log(chalk.green(`  ✓ Installed "${selected}" successfully.`));
+        await this.skillRegistry!.initialize();
+        const skill = await this.skillRegistry!.get(selected);
+        if (skill) {
+          this._pendingSkillInject = skill;
+          console.log(chalk.hex('#3B82F6')(`  Skill "${selected}" will be injected into your next message.`));
+        }
+      } else {
+        console.log(chalk.yellow('  Installation completed but no skills were installed.'));
+      }
+    } catch (err) {
+      console.log(chalk.red(`  Failed to fetch skills: ${(err as Error).message}`));
+      console.log(chalk.dim('  Check your internet connection and try again.'));
+    }
+  }
+
+  // ========================================================================
+  // /skills author select — Browse pre-downloaded skills from SkillsHub
+  // ========================================================================
+
+  private async handleSkillsAuthorCommand(): Promise<void> {
+    const fs = await import('fs');
+    const path = await import('path');
+    const os = await import('os');
+
+    // Look for SkillsHub in several common locations
+    const searchPaths = [
+      path.join(process.cwd(), 'SkillsHub'),
+      path.join(process.cwd(), 'skillshub'),
+      path.join(process.cwd(), '.skillshub'),
+    ];
+
+    let skillsHubDir = searchPaths.find((p: string) => fs.existsSync(p));
+    if (!skillsHubDir) {
+      console.log(chalk.yellow('  SkillsHub folder not found in current directory.'));
+      console.log(chalk.dim('  Create a "SkillsHub" folder with skill zip files and try again.'));
+      console.log(chalk.dim('  Example: /skills author select'));
+      return;
+    }
+
+    // Find all zip files
+    const entries = fs.readdirSync(skillsHubDir).filter((f: string) => f.endsWith('.zip'));
+    if (entries.length === 0) {
+      console.log(chalk.yellow('  No zip files found in SkillsHub/'));
+      console.log(chalk.dim('  Add skill zip files to the SkillsHub folder.'));
+      return;
+    }
+
+    console.log('');
+    console.log(chalk.hex('#7C3AED').bold('  SkillsHub — Local Skill Library'));
+    console.log(chalk.dim(`  Found ${entries.length} skill packages in ${path.basename(skillsHubDir)}/`));
+    console.log('');
+
+    // Parse each zip to get skill info
+    const skillEntries: Array<{ name: string; description: string; zipPath: string }> = [];
+    const { execSync } = await import('child_process');
+
+    for (const entry of entries) {
+      const zipPath = path.join(skillsHubDir, entry);
+      const nameFromZip = entry.replace(/-\d+\.zip$/, '').replace(/\.zip$/, '').replace(/-/g, ' ');
+      let description = '';
+      try {
+        const tmpDir = path.join(os.tmpdir(), `nova-skill-${Date.now()}`);
+        execSync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${tmpDir}' -Force"`, { stdio: 'pipe' });
+        const findSkillMd = (dir: string, depth = 0): string | null => {
+          if (depth > 3) return null;
+          const items = fs.readdirSync(dir, { withFileTypes: true });
+          for (const item of items) {
+            if (item.name === 'SKILL.md' && item.isFile()) return path.join(dir, item.name);
+            if (item.isDirectory() && !item.name.startsWith('.') && item.name !== 'node_modules') {
+              const found = findSkillMd(path.join(dir, item.name), depth + 1);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        const skillMdPath = findSkillMd(tmpDir);
+        if (skillMdPath) {
+          const content = fs.readFileSync(skillMdPath, 'utf-8');
+          const descMatch = content.match(/description:\s*(.+)/);
+          if (descMatch) description = descMatch[1].trim();
+        }
+        try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+      } catch {
+        // If parsing fails, just use filename
+      }
+      skillEntries.push({ name: nameFromZip, description: description || 'No description available', zipPath });
+    }
+
+    // Display interactive selection
+    const selected = await selectSkillInteractive(
+      skillEntries.map(s => ({ name: s.name, description: s.description }))
+    );
+
+    if (!selected) {
+      console.log(chalk.dim('  Cancelled.'));
+      return;
+    }
+
+    const entry = skillEntries.find(s => s.name === selected);
+    if (!entry) return;
+
+    console.log('');
+    console.log(chalk.dim(`  Installing "${selected}"...`));
+
+    try {
+      const { SkillInstaller } = await import('../../../core/src/extensions/SkillInstaller.js');
+      const installer = new SkillInstaller();
+      const installed = await installer.installFromZip(entry.zipPath);
+
+      if (installed.length > 0) {
+        console.log(chalk.green(`  ✓ Installed "${installed[0].name}" successfully.`));
+        await this.skillRegistry!.initialize();
+        const skill = await this.skillRegistry!.get(installed[0].name);
+        if (skill) {
+          this._pendingSkillInject = skill;
+          console.log(chalk.hex('#3B82F6')(`  Skill "${installed[0].name}" will be injected into your next message.`));
+        }
+      } else {
+        console.log(chalk.yellow('  No valid skill found in the zip file.'));
+      }
+    } catch (err) {
+      console.log(chalk.red(`  Installation failed: ${(err as Error).message}`));
+    }
+  }
+
+  // ========================================================================
+  // /skills user — Install skill from custom file/zip path
+  // ========================================================================
+
+  private async handleSkillsUserCommand(): Promise<void> {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    console.log('');
+    console.log(chalk.hex('#7C3AED').bold('  Install Skill from File'));
+    console.log(chalk.dim('  Enter the path to your skill file or zip package.'));
+    console.log(chalk.dim('  Supported: SKILL.md file, .zip archive containing SKILL.md'));
+    console.log('');
+
+    const skillPath = await this.promptInput('  Path: ');
+    if (!skillPath || !skillPath.trim()) {
+      console.log(chalk.dim('  Cancelled.'));
+      return;
+    }
+
+    const resolvedPath = path.resolve(skillPath.trim());
+    if (!fs.existsSync(resolvedPath)) {
+      console.log(chalk.red(`  File not found: ${resolvedPath}`));
+      return;
+    }
+
+    // Ask scope: Global (G) or Local session (L)
+    console.log('');
+    console.log(chalk.dim('  Install scope:'));
+    console.log(chalk.hex('#3B82F6')('    G') + chalk.dim(' — Global (available in all sessions)'));
+    console.log(chalk.hex('#3B82F6')('    L') + chalk.dim(' — Current session only'));
+    console.log('');
+
+    const scope = await this.promptInput('  Scope (G/L): ');
+    const isGlobal = scope?.trim().toLowerCase() === 'g';
+
+    console.log('');
+    console.log(chalk.dim(`  Installing skill from: ${resolvedPath}`));
+    console.log(chalk.dim(`  Scope: ${isGlobal ? 'Global (~/.nova/skills/)' : 'Session (memory only)'}`));
+
+    try {
+      const { SkillInstaller } = await import('../../../core/src/extensions/SkillInstaller.js');
+      const { SkillValidator } = await import('../../../core/src/extensions/SkillValidator.js');
+      const installer = new SkillInstaller();
+
+      let installed;
+      if (resolvedPath.endsWith('.zip')) {
+        installed = await installer.installFromZip(resolvedPath);
+      } else {
+        installed = await installer.installFromFile(resolvedPath);
+      }
+
+      if (installed.length > 0) {
+        console.log(chalk.green(`  ✓ Installed "${installed[0].name}" successfully.`));
+        if (!isGlobal) {
+          const content = fs.readFileSync(path.join(installed[0].path, 'SKILL.md'), 'utf-8');
+          const validator = new SkillValidator();
+          const parsed = validator.parse(content);
+          this._pendingSkillInject = { metadata: parsed, content };
+          console.log(chalk.hex('#3B82F6')(`  Skill "${installed[0].name}" will be injected into your next message.`));
+        } else {
+          await this.skillRegistry!.initialize();
+          const skill = await this.skillRegistry!.get(installed[0].name);
+          if (skill) {
+            this._pendingSkillInject = skill;
+            console.log(chalk.hex('#3B82F6')(`  Skill "${installed[0].name}" will be injected into your next message.`));
+          }
+        }
+      } else {
+        console.log(chalk.yellow('  No valid skill found. Make sure the file contains a SKILL.md.'));
+      }
+    } catch (err) {
+      console.log(chalk.red(`  Installation failed: ${(err as Error).message}`));
+    }
+  }
+
+  // ========================================================================
+  // /skills install — Install skills from GitHub
+  // ========================================================================
+
+  private async handleSkillsInstall(repoArg?: string): Promise<void> {
+    if (!repoArg) {
+      console.log('');
+      console.log(chalk.hex('#7C3AED').bold('  Install Skills from GitHub'));
+      console.log(chalk.dim('  Install skills from GitHub repositories.'));
+      console.log('');
+      console.log(chalk.hex('#3B82F6')('  Popular repositories:'));
+      console.log(chalk.dim('  • superpowers  — Agentic skills (TDD, debugging, review)'));
+      console.log(chalk.dim('  • owner/repo   — Any GitHub repository'));
+      console.log('');
+      console.log(chalk.dim('  Usage:'));
+      console.log(chalk.hex('#7C3AED')('  /skills install superpowers'));
+      console.log(chalk.hex('#7C3AED')('  /skills install obra/superpowers'));
+      return;
+    }
+
+    const { SkillInstaller, POPULAR_SKILL_REPOS } = await import('../../../core/src/extensions/SkillInstaller.js');
+    const installer = new SkillInstaller();
+    const source = (POPULAR_SKILL_REPOS as any)[repoArg]?.url || repoArg;
+
+    console.log(chalk.dim(`  Installing from: ${source}`));
+    console.log('');
+
+    try {
+      const installed = await installer.install({ source, force: false });
+      if (installed.length === 0) {
+        console.log(chalk.yellow('  No new skills installed.'));
+        console.log(chalk.dim('  Use --force to overwrite existing skills.'));
+        return;
+      }
+      console.log('');
+      console.log(chalk.green(`  ✓ Installed ${installed.length} skill${installed.length !== 1 ? 's' : ''}:`));
+      for (const skill of installed) {
+        console.log(chalk.white(`    • ${skill.name}`));
+      }
+      console.log('');
+      console.log(chalk.dim('  Reload skills with: /skills list'));
+      console.log(chalk.dim('  Use a skill with: /skills use <name>'));
+      if (this.skillRegistry) await this.skillRegistry.initialize();
+    } catch (err) {
+      console.log(chalk.red(`  Failed to install: ${(err as Error).message}`));
+      console.log(chalk.dim('  Make sure git is installed and you have internet access.'));
+    }
+  }
+
+  private promptInput(prompt: string): Promise<string> {
+    return new Promise((resolve) => {
+      if (this.rl) {
+        this.rl.question(prompt, (answer) => {
+          resolve(answer.trim());
+        });
+      } else {
+        resolve('');
+      }
+    });
   }
 
   // ========================================================================
@@ -1322,7 +1712,16 @@ export class InkBasedRepl {
 
     // Get mode prefix
     const modePrefix = this.getModePrefix();
-    const fullInput = modePrefix ? `${modePrefix}\n\n${expandedInput}` : expandedInput;
+
+    // Skill injection
+    let skillPrefix = '';
+    if (this._pendingSkillInject) {
+      const skillName = this._pendingSkillInject.metadata.name;
+      skillPrefix = `[SKILL: ${skillName}]\n${this._pendingSkillInject.content}\n[/SKILL]\n\n`;
+      console.log(chalk.hex('#3B82F6')(`  ⚡ Skill "${skillName}" injected`));
+      this._pendingSkillInject = null;
+    }
+    const fullInput = [modePrefix, skillPrefix, expandedInput].filter(Boolean).join('\n\n');
 
     // Get model config to check for built-in search capability
     const modelConfigResult = this.configManager.getModelConfig(this.modelClient.getModel());
@@ -1334,6 +1733,7 @@ export class InkBasedRepl {
           model: this.modelClient.getModel(),
           approvalMode: this.getEffectiveApprovalMode(),
           supportsBuiltinSearch: modelConfigResult?.model?.supportsBuiltinSearch,
+          toolRegistry: this.toolRegistry,
         });
     
         // Inject active skills into system prompt
@@ -1477,7 +1877,7 @@ export class InkBasedRepl {
       this.currentText = '';
 
       // Stop active cursor
-      this.activeCursor.stop();
+      if (this.activeCursor) this.activeCursor.stop();
     }
   }
 
@@ -1531,7 +1931,8 @@ export class InkBasedRepl {
   private async handleApproval(request: ApprovalRequest): Promise<ApprovalResponse> {
     const mode = this.getEffectiveApprovalMode();
 
-    if (mode === 'yolo' || mode === 'accepting_edits') {
+    // Auto-approve in yolo mode
+    if (mode === 'yolo') {
       return { requestId: request.id, approved: true };
     }
 
@@ -1539,6 +1940,10 @@ export class InkBasedRepl {
     console.log(chalk.yellow.bold('  ⚠ Approval Required'));
     console.log(chalk.gray(`  Tool: ${request.toolName}`));
     console.log(chalk.gray(`  Risk: ${request.risk}`));
+    if (request.description) {
+      const desc = request.description.replace(`Tool "${request.toolName}" with input: `, '');
+      console.log(chalk.gray(`  Input: ${desc.slice(0, 80)}`));
+    }
     console.log('');
 
     // For now, auto-approve in non-interactive mode
@@ -1556,18 +1961,17 @@ export class InkBasedRepl {
         return '[PLAN MODE] First analyze and create a step-by-step plan. Wait for confirmation before executing.';
       case 'ask':
         return '[ASK MODE] Only answer questions. Do NOT modify files or execute commands.';
+      case 'smart':
+        return '[SMART MODE] Intelligent approval: low-risk operations auto-approved, high-risk ones ask for confirmation.';
+      case 'edits':
+        return '[EDITS MODE] File read/write/edit auto-approved. Shell commands and other operations may ask for confirmation.';
       default:
         return '';
     }
   }
 
   private getEffectiveApprovalMode(): string {
-    switch (this.state.mode) {
-      case 'auto': return 'yolo';
-      case 'plan': return 'plan';
-      case 'ask': return 'plan';
-      default: return 'default';
-    }
+    return MODE_LABELS[this.state.mode].approvalMode;
   }
 
   private summarizeToolInput(name: string, input: Record<string, unknown>): string {
@@ -1669,7 +2073,7 @@ export class InkBasedRepl {
    * Show compact execution status header
    */
   private showExecutionHeader(): void {
-    console.log(chalk.dim('  ┌─ 执行开始 ' + '─'.repeat(40)));
+    console.log(chalk.dim('    ┌─ 执行开始 ' + '─'.repeat(40)));
   }
 
   /**

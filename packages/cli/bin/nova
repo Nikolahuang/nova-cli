@@ -26,13 +26,25 @@ if (isCompiled) {
   // Running from source, need tsx
   const tsxPath = join(__dirname, '../node_modules/.bin/tsx');
   const tsxCmd = existsSync(tsxPath + '.cmd') ? tsxPath + '.cmd' : tsxPath;
-  
-  const child = spawn(tsxCmd, [mainScript, ...process.argv.slice(2)], {
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-  });
-  
-  child.on('exit', (code) => {
-    process.exit(code ?? 0);
-  });
+  const userArgs = process.argv.slice(2);
+
+  if (process.platform === 'win32') {
+    // Windows: use cmd /c to run .cmd file
+    // This avoids shell:true which would let cmd intercept reserved words like 'set'
+    const child = spawn('cmd', ['/c', tsxCmd, mainScript, ...userArgs], {
+      stdio: 'inherit',
+    });
+
+    child.on('exit', (code) => {
+      process.exit(code ?? 0);
+    });
+  } else {
+    const child = spawn(tsxCmd, [mainScript, ...userArgs], {
+      stdio: 'inherit',
+    });
+
+    child.on('exit', (code) => {
+      process.exit(code ?? 0);
+    });
+  }
 }

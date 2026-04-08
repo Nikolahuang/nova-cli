@@ -133,11 +133,16 @@ export const BUILTIN_TOOLS = {
   WRITE_FILE: 'write_file',
   EDIT_FILE: 'edit_file',
   LIST_DIRECTORY: 'list_directory',
+  APPLY_PATCH: 'apply_patch',
+  MULTIEDIT: 'multiedit',
   
   // Search operations
   SEARCH_FILE: 'search_file',
   SEARCH_CONTENT: 'search_content',
   GLOB: 'glob',
+  
+  // Code intelligence
+  LSP: 'lsp',
   
   // Execution
   EXECUTE_COMMAND: 'execute_command',
@@ -150,8 +155,19 @@ export const BUILTIN_TOOLS = {
   MEMORY_READ: 'memory_read',
   MEMORY_WRITE: 'memory_write',
   
+  // Processing
+  IMAGE_PROCESSOR: 'image_processor',
+  FILE_PROCESSOR: 'file_processor',
+  
   // Orchestration
+  TODO: 'todo',
   TASK: 'task',
+  
+  // Interaction
+  QUESTION: 'question',
+  
+  // Output
+  TRUNCATE: 'truncate',
 } as const;
 
 export type BuiltinToolName = (typeof BUILTIN_TOOLS)[keyof typeof BUILTIN_TOOLS];

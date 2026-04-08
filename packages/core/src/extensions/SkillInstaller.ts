@@ -146,6 +146,19 @@ export class SkillInstaller {
       }
     }
 
+    // Check if the repo root itself contains skill directories (each with SKILL.md)
+    // This handles repos like daymade/claude-code-skills where skills are at root level
+    const rootEntries = fs.readdirSync(repoDir).filter(entry => {
+      const entryPath = path.join(repoDir, entry);
+      return fs.statSync(entryPath).isDirectory() && 
+             !entry.startsWith('.') && 
+             entry !== 'node_modules' &&
+             fs.existsSync(path.join(entryPath, 'SKILL.md'));
+    });
+    if (rootEntries.length > 0) {
+      return repoDir;
+    }
+
     return null;
   }
 
@@ -217,6 +230,93 @@ export class SkillInstaller {
     if (!fs.existsSync(skillPath)) return false;
     this.rmrf(skillPath);
     return true;
+  }
+
+  /**
+   * Install a skill from a zip file
+   */
+  async installFromZip(zipPath: string, targetDir?: string): Promise<InstalledSkill[]> {
+    const target = targetDir || this.baseDir;
+    const tempDir = path.join(os.tmpdir(), `nova-skill-zip-${Date.now()}`);
+
+    try {
+      // Extract zip using PowerShell (Windows compatible)
+      fs.mkdirSync(tempDir, { recursive: true });
+      execSync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${tempDir}' -Force"`, { stdio: 'pipe' });
+
+      // Find SKILL.md in extracted directory
+      const skillMdPath = this.findSkillMd(tempDir);
+      if (!skillMdPath) {
+        throw new Error('No SKILL.md found in the zip file');
+      }
+
+      const skillDir = path.dirname(skillMdPath);
+      const skillName = path.basename(skillDir);
+      const destPath = path.join(target, skillName);
+
+      // Copy skill to target directory
+      this.copySkill(skillDir, destPath);
+
+      return [{ name: skillName, path: destPath, source: zipPath }];
+    } finally {
+      this.rmrf(tempDir);
+    }
+  }
+
+  /**
+   * Install a skill from a single SKILL.md file or a directory containing SKILL.md
+   */
+  async installFromFile(filePath: string, targetDir?: string): Promise<InstalledSkill[]> {
+    const target = targetDir || this.baseDir;
+    const resolvedPath = path.resolve(filePath);
+
+    let skillDir: string;
+    let skillName: string;
+
+    if (fs.statSync(resolvedPath).isFile()) {
+      // It's a file - should be SKILL.md or similar
+      const content = fs.readFileSync(resolvedPath, 'utf-8');
+      const nameMatch = content.match(/^name:\s*(.+)$/m);
+      skillName = nameMatch ? nameMatch[1].trim().replace(/\s+/g, '-').toLowerCase() : 'custom-skill';
+      skillDir = path.dirname(resolvedPath);
+    } else {
+      // It's a directory - look for SKILL.md inside
+      const skillMd = path.join(resolvedPath, 'SKILL.md');
+      if (!fs.existsSync(skillMd)) {
+        throw new Error(`No SKILL.md found in ${resolvedPath}`);
+      }
+      const content = fs.readFileSync(skillMd, 'utf-8');
+      const nameMatch = content.match(/^name:\s*(.+)$/m);
+      skillName = nameMatch ? nameMatch[1].trim().replace(/\s+/g, '-').toLowerCase() : path.basename(resolvedPath);
+      skillDir = resolvedPath;
+    }
+
+    const destPath = path.join(target, skillName);
+    this.copySkill(skillDir, destPath);
+
+    return [{ name: skillName, path: destPath, source: resolvedPath }];
+  }
+
+  /**
+   * Recursively search for SKILL.md in a directory
+   */
+  private findSkillMd(dir: string, depth = 0): string | null {
+    if (depth > 3) return null;
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.name === 'SKILL.md' && entry.isFile()) {
+          return path.join(dir, entry.name);
+        }
+        if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+          const found = this.findSkillMd(path.join(dir, entry.name), depth + 1);
+          if (found) return found;
+        }
+      }
+    } catch {
+      // Ignore permission errors etc.
+    }
+    return null;
   }
 }
 

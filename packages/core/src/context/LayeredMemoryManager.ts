@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import type { Message, SessionId } from '../types/session.js';
-import { ContextCompressor, type StructuredSummary, type FileChange, type Decision } from './ContextCompressor.js';
+import { OptimizedContextCompressor, type StructuredSummary, type FileChange, type Decision } from './OptimizedContextCompressor.js';
 
 // --- Memory Layer Types ---
 
@@ -140,7 +140,7 @@ export class LayeredMemoryManager {
     this.sessionId = options.sessionId;
     this.storageDir = options.storageDir || path.join(os.homedir(), '.nova', 'memory', this.sessionId.slice(0, 8));
     this.immediateBuffer = new CircularBuffer(options.l1MaxMessages || 10);
-    this.compressor = new ContextCompressor(this.sessionId);
+    this.compressor = new OptimizedContextCompressor(this.sessionId);
     this.l2MaxTokens = options.l2MaxTokens || 2000;
     this.l3MaxEntries = options.l3MaxEntries || 20;
     this.l4MaxRetrieveEntries = options.l4MaxRetrieveEntries || 5;
@@ -252,7 +252,7 @@ export class LayeredMemoryManager {
    */
   retrieveLongTerm(query: MemoryQuery): MemoryEntry[] {
     const queryLower = query.query.toLowerCase();
-    const queryTokens = queryLower.split(/\s+/);
+    const queryTokens = queryLower.split(/\s+/).filter(t => t.length >= 2);
 
     let entries = Array.from(this.longTermMemory.values());
 
@@ -271,28 +271,50 @@ export class LayeredMemoryManager {
       return true;
     });
 
-    // Score and rank by relevance
+    // Build IDF (inverse document frequency) across all entries
+    const docCount = entries.length || 1;
+    const docFreq: Map<string, number> = new Map();
+    for (const entry of entries) {
+      const contentStr = (typeof entry.content === 'string' ? entry.content : JSON.stringify(entry.content)).toLowerCase();
+      const tagsStr = entry.tags.join(' ').toLowerCase();
+      const fullText = contentStr + ' ' + tagsStr;
+      const seen = new Set<string>();
+      for (const token of fullText.split(/\s+/)) {
+        if (token.length >= 2 && !seen.has(token)) {
+          seen.add(token);
+          docFreq.set(token, (docFreq.get(token) || 0) + 1);
+        }
+      }
+    }
+
+    // Score and rank by TF-IDF relevance
     const scored = entries.map((entry) => {
       const contentStr = typeof entry.content === 'string' ? entry.content : JSON.stringify(entry.content);
       const contentLower = contentStr.toLowerCase();
       const tagsLower = entry.tags.join(' ').toLowerCase();
+      const fullText = contentLower + ' ' + tagsLower;
 
-      // Simple TF scoring: count matching tokens
+      // TF-IDF scoring
       let score = 0;
       for (const token of queryTokens) {
-        if (token.length < 2) continue;
         const regex = new RegExp(token, 'gi');
         const contentMatches = contentLower.match(regex);
         const tagMatches = tagsLower.match(regex);
-        score += (contentMatches?.length || 0) * 2; // Content matches count more
-        score += (tagMatches?.length || 0) * 3; // Tag matches count even more
+        const tf = ((contentMatches?.length || 0) * 2 + (tagMatches?.length || 0) * 3);
+        
+        // IDF component: rare terms are more important
+        const df = docFreq.get(token) || 1;
+        const idf = Math.log(1 + docCount / df);
+        
+        score += tf * idf;
       }
 
-      // Boost recently accessed entries slightly
-      const recencyBoost = 1 + (entry.accessCount * 0.05);
+      // Boost recently accessed entries (recency decay)
+      const hoursSinceAccess = (now - entry.lastAccessedAt) / (1000 * 60 * 60);
+      const recencyBoost = 1 + Math.max(0, entry.accessCount * 0.05 - hoursSinceAccess * 0.01);
       score *= recencyBoost;
 
-      entry.relevanceScore = Math.min(score / 10, 1);
+      entry.relevanceScore = Math.min(score / 20, 1);
       return { entry, score };
     });
 
@@ -355,11 +377,11 @@ export class LayeredMemoryManager {
 
   /**
    * Retrieve relevant entries from L4 archival.
-   * Currently uses same keyword matching as L3, but from disk-backed index.
+   * Uses BM25 algorithm + semantic similarity for better retrieval.
    */
   async retrieveArchival(query: MemoryQuery): Promise<MemoryEntry[]> {
     const queryLower = query.query.toLowerCase();
-    const queryTokens = queryLower.split(/\s+/);
+    const queryTokens = queryLower.split(/\s+/).filter(t => t.length >= 2);
 
     let entries = Array.from(this.archivalIndex.values());
 
@@ -367,34 +389,115 @@ export class LayeredMemoryManager {
     const now = Date.now();
     entries = entries.filter((e) => !e.ttl || now - e.createdAt <= e.ttl);
 
-    // Score relevance
+    if (entries.length === 0) return [];
+
+    // Build document frequency for BM25
+    const docCount = entries.length;
+    const docFreq: Map<string, number> = new Map();
+    const docLengths: Map<string, number> = new Map();
+    const avgDocLength = this.calculateAvgDocLength(entries, docFreq, docLengths);
+
+    // BM25 parameters
+    const k1 = 1.5;
+    const b = 0.75;
+
+    // Score with BM25 + semantic similarity
     const scored = entries.map((entry) => {
       const contentStr = typeof entry.content === 'string' ? entry.content : JSON.stringify(entry.content);
       const contentLower = contentStr.toLowerCase();
-      let score = 0;
+      const tagsLower = entry.tags.join(' ').toLowerCase();
+      const fullText = contentLower + ' ' + tagsLower;
+      const docLength = docLengths.get(entry.id) || fullText.split(/\s+/).length;
+
+      // BM25 score
+      let bm25Score = 0;
       for (const token of queryTokens) {
-        if (token.length < 2) continue;
-        const regex = new RegExp(token, 'gi');
-        score += (contentLower.match(regex)?.length || 0);
+        const tf = (fullText.match(new RegExp(token, 'gi'))?.length || 0);
+        const df = docFreq.get(token) || 1;
+        const idf = Math.log(1 + (docCount - df + 0.5) / (df + 0.5));
+        
+        // BM25 formula
+        const numerator = tf * (k1 + 1);
+        const denominator = tf + k1 * (1 - b + b * (docLength / avgDocLength));
+        bm25Score += idf * (numerator / denominator);
       }
-      entry.relevanceScore = Math.min(score / 5, 1);
-      return { entry, score };
+
+      // Semantic similarity (simple word overlap ratio)
+      const docTokens = new Set(fullText.split(/\s+/).filter(t => t.length >= 2));
+      const queryTokenSet = new Set(queryTokens);
+      const intersection = [...queryTokenSet].filter(t => docTokens.has(t));
+      const semanticScore = queryTokenSet.size > 0 ? intersection.length / queryTokenSet.size : 0;
+
+      // Tag boost
+      const tagBoost = entry.tags.some(tag => 
+        queryTokens.some(token => tag.toLowerCase().includes(token))
+      ) ? 1.5 : 1.0;
+
+      // Recency boost
+      const ageDays = (now - entry.createdAt) / (1000 * 60 * 60 * 24);
+      const recencyBoost = Math.max(0.5, 1 - ageDays * 0.01);
+
+      // Combined score
+      const combinedScore = (bm25Score * 0.6 + semanticScore * 0.4) * tagBoost * recencyBoost;
+
+      entry.relevanceScore = Math.min(combinedScore, 1);
+      return { entry, score: combinedScore };
     });
 
+    // Sort by score descending
     scored.sort((a, b) => b.score - a.score);
 
-    const minScore = query.minScore || 0.3;
+    const minScore = query.minScore || 0.1;
     const maxEntries = query.maxEntries || this.l4MaxRetrieveEntries;
+    const maxTokens = query.maxTokens || this.totalTokenBudget * 0.2;
     const result: MemoryEntry[] = [];
+    let totalTokens = 0;
 
     for (const { entry } of scored) {
       if (result.length >= maxEntries) break;
+      if (totalTokens + entry.tokenCount > maxTokens) break;
       if (entry.relevanceScore! >= minScore) {
+        // Update access metadata
+        entry.accessCount++;
+        entry.lastAccessedAt = Date.now();
         result.push(entry);
+        totalTokens += entry.tokenCount;
       }
     }
 
     return result;
+  }
+
+  /**
+   * Calculate average document length and build document frequency map.
+   */
+  private calculateAvgDocLength(
+    entries: MemoryEntry[],
+    docFreq: Map<string, number>,
+    docLengths: Map<string, number>
+  ): number {
+    let totalLength = 0;
+    
+    for (const entry of entries) {
+      const contentStr = typeof entry.content === 'string' ? entry.content : JSON.stringify(entry.content);
+      const tagsStr = entry.tags.join(' ');
+      const fullText = (contentStr + ' ' + tagsStr).toLowerCase();
+      const tokens = fullText.split(/\s+/).filter(t => t.length >= 2);
+      
+      docLengths.set(entry.id, tokens.length);
+      totalLength += tokens.length;
+
+      // Build document frequency
+      const seen = new Set<string>();
+      for (const token of tokens) {
+        if (!seen.has(token)) {
+          seen.add(token);
+          docFreq.set(token, (docFreq.get(token) || 0) + 1);
+        }
+      }
+    }
+
+    return entries.length > 0 ? totalLength / entries.length : 100;
   }
 
   // ========================================================================

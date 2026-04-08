@@ -97,7 +97,23 @@ export class ApprovalManager {
       }
     }
 
-    // Tool definition check
+    // Mode-specific default behaviors (check BEFORE tool definition)
+    // accepting_edits: auto-approve file, search, memory tools
+    if (this.mode === 'accepting_edits') {
+      const cat = toolDefinition?.category;
+      if (cat === 'file' || cat === 'search' || cat === 'memory') return false;
+      // execution, web, orchestration, mcp tools still require approval
+      return true;
+    }
+
+    // smart mode: auto-approve low risk tools
+    if (this.mode === 'smart') {
+      const risk = toolDefinition?.riskLevel || 'medium';
+      if (risk === 'low') return false;
+      return true;
+    }
+
+    // Tool definition check (for default and plan modes)
     if (toolDefinition) {
       if (typeof toolDefinition.requiresApproval === 'boolean') {
         return toolDefinition.requiresApproval;
@@ -105,12 +121,15 @@ export class ApprovalManager {
       return toolDefinition.requiresApproval(toolInput, this.mode);
     }
 
-    // Default: require approval in plan mode, skip for low risk in accepting_edits
+    // Fallback defaults for remaining modes
     if (this.mode === 'plan') return true;
-    if (this.mode === 'accepting_edits') return false;
-    if (this.mode === 'smart') return true; // Smart mode asks for important ops
+    if (this.mode === 'default') {
+      // Default mode: require approval for high/critical risk tools
+      const risk = toolDefinition?.riskLevel || 'medium';
+      return risk === 'high' || risk === 'critical';
+    }
 
-    // Default mode: require approval for high/critical risk tools
+    // Should never reach here, but default to requiring approval
     return true;
   }
 

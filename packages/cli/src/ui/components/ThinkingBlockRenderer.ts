@@ -1,8 +1,10 @@
 // ============================================================================
-// ThinkingBlockRenderer - Collapsible thinking block display for REPL
+// ThinkingBlockRenderer - Enhanced collapsible thinking block display
+// Modern design inspired by Claude Code with improved visual hierarchy
 // ============================================================================
 
 import chalk from 'chalk';
+import { getTheme } from '../themes/theme-config.js';
 
 // ============================================================================
 // Types
@@ -28,6 +30,25 @@ export interface ThinkingBlockState {
   startTime: number;
   isComplete: boolean;
 }
+
+// ============================================================================
+// Enhanced box drawing characters with modern design
+// ============================================================================
+
+const BOX = {
+  // Basic corners
+  tl: '╭', tr: '╮', bl: '╰', br: '╯',
+  // Thick lines
+  hThick: '━', vThick: '┃',
+  // Thin lines
+  h: '─', v: '│',
+  // Connectors
+  ht: '├', htr: '┤', vt: '┬', vtr: '┤',
+  // Tree structure
+  treeRight: '└─', treeBranch: '├─', treeVertical: '│ ',
+  // Icons
+  sparkles: '✨', brain: '🧠', lightning: '⚡',
+};
 
 // ============================================================================
 // ANSI helpers for terminal control
@@ -69,11 +90,14 @@ export class ThinkingBlockRenderer {
   constructor(options: ThinkingBlockOptions = {}) {
     this.options = {
       expanded: options.expanded ?? false,
-      maxPreviewLines: options.maxPreviewLines ?? 4,
-      maxLineLength: options.maxLineLength ?? 80,
+      maxPreviewLines: options.maxPreviewLines ?? 5,
+      maxLineLength: options.maxLineLength ?? 100,
       showElapsedTime: options.showElapsedTime ?? true,
       icon: options.icon ?? '💭',
       showStreamingPreview: options.showStreamingPreview ?? false,
+      // Enhanced Claude Code style defaults
+      enhancedVisuals: options.enhancedVisuals ?? true,
+      showComplexityIndicator: options.showComplexityIndicator ?? false,
     };
   }
 
@@ -182,16 +206,22 @@ export class ThinkingBlockRenderer {
   // ========================================================================
 
   /**
-   * Render minimal indicator during thinking (default behavior)
+   * Render enhanced minimal indicator during thinking (default behavior)
    */
   private renderMinimalIndicator(): void {
     const elapsed = this.formatDuration(this.state?.startTime ?? Date.now());
-    // Use gray/dim styling for thinking indicator
+    // Get theme colors
+    const theme = getTheme();
+    const accentColor = chalk.hex(theme.colors.info);
+    const dimColor = chalk.hex(theme.colors.dim);
+
+    // Enhanced minimal indicator with modern design
     process.stdout.write(
-      chalk.gray.dim('  ') +
-      chalk.gray.dim(this.options.icon + ' ') +
-      chalk.gray.dim.italic('thinking') +
-      chalk.gray.dim(` (${elapsed})...`) +
+      dimColor('  ') +
+      accentColor(BOX.sparkles) + ' ' +
+      dimColor('思考中') +
+      (this.options.showElapsedTime ? dimColor(` (${elapsed})`) : '') +
+      dimColor('...') +
       '\r'
     );
   }
@@ -276,8 +306,7 @@ export class ThinkingBlockRenderer {
   }
 
   /**
-   * Render the final collapsed/expanded thinking block.
-   * Uses gray/dim color to distinguish from normal output.
+   * Render the final collapsed/expanded thinking block with enhanced design
    */
   private renderFinal(): void {
     if (!this.state || !this.state.text.trim()) return;
@@ -287,38 +316,62 @@ export class ThinkingBlockRenderer {
     const charCount = text.length;
     const lineCount = text.split('\n').length;
 
+    // Get theme colors
+    const theme = getTheme();
+    const borderColor = chalk.hex(theme.colors.borderDim);
+    const textColor = chalk.hex(theme.colors.dim);
+    const accentColor = chalk.hex(theme.colors.info);
+
     if (!this.options.expanded) {
-      // Collapsed: show single summary line in gray
-      // This is the default - minimal visual impact
+      // Collapsed: show enhanced single summary line with modern design
       console.log(
-        chalk.gray.dim('  └─ ') +
-        chalk.gray.dim(this.options.icon + ' ') +
-        chalk.gray.dim.italic('thinking') +
-        chalk.gray.dim(` (${charCount} chars, ${elapsed})`)
+        textColor('  ') + 
+        accentColor(BOX.sparkles) + ' ' +
+        textColor('思考过程') + 
+        textColor.dim(` (${charCount} 字符, ${elapsed})`)
       );
     } else {
-      // Expanded: show preview lines in gray
+      // Expanded: show enhanced preview with modern border design
       const lines = text.split('\n');
       const previewLines = lines.slice(0, this.options.maxPreviewLines);
       const truncated = lines.length > this.options.maxPreviewLines;
+      const width = Math.min(process.stdout.columns || 80, 100);
 
-      console.log(
-        chalk.gray.dim('  ┌─ ') +
-        chalk.gray.dim(this.options.icon + ' ') +
-        chalk.gray.dim.italic(`thinking (${elapsed})`)
-      );
+      // Header with enhanced design
+      const headerText = ` ${this.options.icon} 思考过程 (${elapsed}) `;
+      const headerPadding = width - headerText.length - 2;
+      
+      console.log('');
+      console.log(borderColor(BOX.tl) + borderColor(BOX.hThick.repeat(width)) + borderColor(BOX.tr));
+      console.log(borderColor(BOX.v) + accentColor.bold(headerText) + ' '.repeat(Math.max(0, headerPadding)) + borderColor(BOX.v));
+      console.log(borderColor(BOX.ht) + borderColor(BOX.h.repeat(width)) + borderColor(BOX.htr));
 
+      // Content lines with enhanced formatting
       for (const line of previewLines) {
         const truncatedLine = line.slice(0, this.options.maxLineLength);
-        // Gray/dim styling for thinking content
-        console.log(chalk.gray.dim('  │ ') + chalk.gray.dim(truncatedLine));
+        const linePadding = width - truncatedLine.length - 4;
+        console.log(
+          borderColor(BOX.v) + ' ' + 
+          textColor(truncatedLine) + 
+          ' '.repeat(Math.max(0, linePadding)) + ' ' + 
+          borderColor(BOX.v)
+        );
       }
 
+      // Footer with enhanced design
       if (truncated) {
-        console.log(chalk.gray.dim(`  └─ ... (${lines.length - this.options.maxPreviewLines} more lines)`));
-      } else {
-        console.log(chalk.gray.dim('  └─ end'));
+        const footerText = ` ... 还有 ${lines.length - this.options.maxPreviewLines} 行`;
+        const footerPadding = width - footerText.length - 2;
+        console.log(
+          borderColor(BOX.v) + 
+          textColor.dim(footerText) + 
+          ' '.repeat(Math.max(0, footerPadding)) + 
+          borderColor(BOX.v)
+        );
       }
+      
+      console.log(borderColor(BOX.bl) + borderColor(BOX.hThick.repeat(width)) + borderColor(BOX.br));
+      console.log('');
     }
   }
 

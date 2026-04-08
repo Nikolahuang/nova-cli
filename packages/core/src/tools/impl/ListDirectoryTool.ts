@@ -2,19 +2,40 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ToolHandler, ToolHandlerInput, ToolHandlerOutput } from '../../types/tools.js';
 import { ToolError } from '../../types/errors.js';
+import { FileFilter } from '../../security/FileFilter.js';
 
 /** Maximum entries to return before truncating with guidance */
 const MAX_ENTRIES = 500;
 
 export const listDirectoryHandler: ToolHandler = async (input: ToolHandlerInput): Promise<ToolHandlerOutput> => {
-  const { dirPath, recursive = false, includeHidden = false, pattern, depth, limit } = input.params as {
+  const { dirPath, recursive = false, includeHidden = false, pattern, depth, limit, allowExternalAccess = false, additionalAllowedPaths = [] } = input.params as {
     dirPath: string;
     recursive?: boolean;
     includeHidden?: boolean;
     pattern?: string;
     depth?: number;
     limit?: number;
+    allowExternalAccess?: boolean;
+    additionalAllowedPaths?: string[];
   };
+
+  // Create a temporary FileFilter to validate directory access if external access is not allowed
+  let fileFilter: FileFilter | undefined;
+  if (!allowExternalAccess) {
+    fileFilter = new FileFilter({
+      ignorePatterns: ['node_modules/**', '.git/**', 'dist/**', 'build/**', '*.log', '.env', '.env.local'],
+      workingDirectory: process.cwd(),
+      maxFileSize: 10 * 1024 * 1024,
+      maxBatchSize: 100,
+      allowExternalAccess: allowExternalAccess,
+      additionalAllowedPaths: additionalAllowedPaths,
+    });
+    
+    const accessCheck = fileFilter.isAllowed(dirPath);
+    if (!accessCheck.allowed) {
+      throw new ToolError(`Directory access denied: ${accessCheck.reason}`, 'list_directory');
+    }
+  }
 
   const resolvedPath = path.resolve(dirPath);
   const maxEntries = limit || MAX_ENTRIES;
@@ -111,6 +132,8 @@ export const listDirectoryHandler: ToolHandler = async (input: ToolHandlerInput)
         files: fileCount,
         directories: dirCount,
         suggestion: truncated ? 'Use pattern, limit, or non-recursive mode to narrow results' : undefined,
+        allowExternalAccess,
+        additionalAllowedPaths,
       },
     };
   } catch (err) {

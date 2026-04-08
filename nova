@@ -1,9 +1,0 @@
-#!/bin/bash
-
-# Nova CLI launcher script
-# Usage: ./nova [args]
-
-NOVA_ROOT="$(cd "$(dirname "$0")" && pwd)"
-NODE_OPTIONS="--import $NOVA_ROOT/node_modules/tsx/dist/loader.mjs"
-
-node $NODE_OPTIONS "$NOVA_ROOT/packages/cli/bin/nova.js" "$@"

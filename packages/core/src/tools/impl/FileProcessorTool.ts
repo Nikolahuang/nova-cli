@@ -2,8 +2,18 @@
 // FileProcessor Tool - 文件处理工具实现
 // ============================================================================
 
-import { FileProcessor, fileProcessor } from './FileProcessor.js';
 import { FileProcessorInput, fileProcessorToolDefinition } from '../schemas/fileProcessorSchema.js';
+import { FileFilter } from '../../security/FileFilter.js';
+
+// Lazy import to avoid localStorage warning from docx package at startup
+let _fileProcessor: typeof import('./FileProcessor.js').fileProcessor | null = null;
+async function getFileProcessor() {
+    if (!_fileProcessor) {
+        const module = await import('./FileProcessor.js');
+        _fileProcessor = module.fileProcessor;
+    }
+    return _fileProcessor;
+}
 
 export class FileProcessorTool {
     
@@ -13,11 +23,41 @@ export class FileProcessorTool {
      * 执行文件处理操作
      */
     async execute(input: FileProcessorInput): Promise<any> {
-        const { operation, filePath, content, encoding, outputPath, options } = input;
+        const fileProcessor = await getFileProcessor();
+        const { operation, filePath, content, encoding, outputPath, options, allowExternalAccess = false, additionalAllowedPaths = [] } = input;
         
         // Convert encoding to BufferEncoding type
         const bufferEncoding = (encoding || 'utf8') as BufferEncoding;
         
+        // Create a temporary FileFilter to validate file access if external access is not allowed
+        let fileFilter: FileFilter | undefined;
+        if (!allowExternalAccess) {
+            fileFilter = new FileFilter({
+                ignorePatterns: ['node_modules/**', '.git/**', 'dist/**', 'build/**', '*.log', '.env', '.env.local'],
+                workingDirectory: process.cwd(),
+                maxFileSize: 10 * 1024 * 1024,
+                maxBatchSize: 100,
+                allowExternalAccess: allowExternalAccess,
+                additionalAllowedPaths: additionalAllowedPaths,
+            });
+            
+            // Check input file access
+            if (filePath) {
+                const accessCheck = fileFilter.isAllowed(filePath);
+                if (!accessCheck.allowed) {
+                    throw new Error(`File access denied: ${accessCheck.reason}`);
+                }
+            }
+            
+            // Check output file access
+            if (outputPath) {
+                const accessCheck = fileFilter.isAllowed(outputPath);
+                if (!accessCheck.allowed) {
+                    throw new Error(`Output file access denied: ${accessCheck.reason}`);
+                }
+            }
+        }
+
         try {
             switch (operation) {
                 // 基础文件操作

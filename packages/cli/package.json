@@ -20,13 +20,15 @@
     "README.md"
   ],
   "scripts": {
-    "start": "node --import tsx bin/nova.js",
-    "dev": "node --import tsx bin/nova.js",
-    "build": "tsc -p tsconfig.json",
+    "start": "bun run bin/nova.js",
+    "dev": "bun run --watch bin/nova.js",
+    "build": "bun build bin/nova.js --outfile dist/index.js --target bun",
     "test": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "start:node": "node --import tsx bin/nova.js",
+    "dev:node": "node --import tsx bin/nova.js"
   },
   "keywords": [
     "ai",
@@ -50,6 +52,7 @@
   },
   "homepage": "https://github.com/nova-cli/nova-cli#readme",
   "engines": {
+    "bun": ">=1.0.0",
     "node": ">=18.0.0"
   },
   "dependencies": {

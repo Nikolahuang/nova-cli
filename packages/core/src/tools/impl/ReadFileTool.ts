@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ToolHandler, ToolHandlerInput, ToolHandlerOutput } from '../../types/tools.js';
 import { ToolError } from '../../types/errors.js';
+import { FileFilter } from '../../security/FileFilter.js';
 
 /**
  * Detect file type based on extension
@@ -125,14 +126,34 @@ async function extractPdfText(filePath: string): Promise<string> {
 }
 
 export const readFileHandler: ToolHandler = async (input: ToolHandlerInput): Promise<ToolHandlerOutput> => {
-  const { filePath, offset, limit, encoding = 'utf-8' } = input.params as {
+  const { filePath, offset, limit, encoding = 'utf-8', allowExternalAccess = false, additionalAllowedPaths = [] } = input.params as {
     filePath: string;
     offset?: number;
     limit?: number;
     encoding?: BufferEncoding;
+    allowExternalAccess?: boolean;
+    additionalAllowedPaths?: string[];
   };
 
   try {
+    // Create a temporary FileFilter to validate file access if external access is not allowed
+    let fileFilter: FileFilter | undefined;
+    if (!allowExternalAccess) {
+      fileFilter = new FileFilter({
+        ignorePatterns: ['node_modules/**', '.git/**', 'dist/**', 'build/**', '*.log', '.env', '.env.local'],
+        workingDirectory: process.cwd(),
+        maxFileSize: 10 * 1024 * 1024,
+        maxBatchSize: 100,
+        allowExternalAccess: allowExternalAccess,
+        additionalAllowedPaths: additionalAllowedPaths,
+      });
+      
+      const accessCheck = fileFilter.isAllowed(filePath);
+      if (!accessCheck.allowed) {
+        throw new ToolError(`File access denied: ${accessCheck.reason}`, 'read_file');
+      }
+    }
+
     const resolvedPath = path.resolve(filePath);
     const fileType = getFileType(resolvedPath);
     
@@ -165,6 +186,8 @@ export const readFileHandler: ToolHandler = async (input: ToolHandlerInput): Pro
             fileType: 'pdf',
             totalLines: lines.length,
             lineRange: lineInfo || 'full file',
+            allowExternalAccess,
+            additionalAllowedPaths,
           },
         };
       } catch (pdfError) {
@@ -184,11 +207,13 @@ export const readFileHandler: ToolHandler = async (input: ToolHandlerInput): Pro
     if (fileType === 'image') {
       const stats = await fs.stat(resolvedPath);
       return {
-        content: `[Image file: ${path.basename(filePath)}]\nSize: ${(stats.size / 1024).toFixed(2)} KB\nPath: ${resolvedPath}\n\nTip: Image preview is not supported in text mode. Use the file path to open in an image viewer.`,
+        content: `[Image file: ${path.basename(filePath)}]\nSize: ${(stats.size / 1024).toFixed(2)} KB\nPath: ${resolvedPath}\n\nTip: Image preview is not supported in text mode. Use the file path to open in an image viewer.${allowExternalAccess ? '' : '\n\nNote: External file access is disabled by default for security.'}`,
         metadata: {
           path: resolvedPath,
           fileType: 'image',
           size: stats.size,
+          allowExternalAccess,
+          additionalAllowedPaths,
         },
       };
     }
@@ -197,11 +222,13 @@ export const readFileHandler: ToolHandler = async (input: ToolHandlerInput): Pro
     if (fileType === 'binary') {
       const stats = await fs.stat(resolvedPath);
       return {
-        content: `[Binary file: ${path.basename(filePath)}]\nSize: ${(stats.size / 1024).toFixed(2)} KB\nPath: ${resolvedPath}\n\nBinary files cannot be displayed as text.`,
+        content: `[Binary file: ${path.basename(filePath)}]\nSize: ${(stats.size / 1024).toFixed(2)} KB\nPath: ${resolvedPath}\n\nBinary files cannot be displayed as text.${allowExternalAccess ? '' : '\n\nNote: External file access is disabled by default for security.'}`,
         metadata: {
           path: resolvedPath,
           fileType: 'binary',
           size: stats.size,
+          allowExternalAccess,
+          additionalAllowedPaths,
         },
       };
     }
@@ -235,6 +262,8 @@ export const readFileHandler: ToolHandler = async (input: ToolHandlerInput): Pro
         encoding,
         size: Buffer.byteLength(content, encoding),
         lineRange: lineInfo || 'full file',
+        allowExternalAccess,
+        additionalAllowedPaths,
       },
     };
   } catch (err) {

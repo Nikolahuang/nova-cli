@@ -153,9 +153,32 @@ export class ToolRegistry {
 
     // yolo mode: never require approval
     if (mode === 'yolo') return false;
-    // accepting_edits: never require approval
-    if (mode === 'accepting_edits') return false;
 
+    // accepting_edits: auto-approve file tools, require approval for everything else
+    if (mode === 'accepting_edits') {
+      const cat = entry.definition.category;
+      if (cat === 'file' || cat === 'search' || cat === 'memory') return false;
+      // Always require approval for execution, web, orchestration, and mcp tools
+      return true;
+    }
+
+    // plan mode: always ask for tools that have requiresApproval set
+    if (mode === 'plan') {
+      const { requiresApproval } = entry.definition;
+      if (requiresApproval === undefined) return true; // plan mode: default to ask
+      if (typeof requiresApproval === 'boolean') return requiresApproval;
+      return requiresApproval(input, mode);
+    }
+
+    // smart mode: auto-approve low risk, ask for medium+ risk
+    if (mode === 'smart') {
+      const risk = entry.definition.riskLevel;
+      if (risk === 'low') return false;
+      // medium, high, critical: always ask for approval
+      return true;
+    }
+
+    // default mode: respect tool's own requiresApproval attribute
     const { requiresApproval } = entry.definition;
     if (requiresApproval === undefined) return false;
     if (typeof requiresApproval === 'boolean') return requiresApproval;

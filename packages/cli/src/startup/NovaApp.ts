@@ -26,13 +26,13 @@ import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.js';
 import { SessionManager } from '../../../core/src/session/SessionManager.js';
 import type { SessionId } from '../../../core/src/types/session.js';
 import type { ModelConfig } from '../../../core/src/types/config.js';
-import { AgentLoop } from '../../../core/src/session/AgentLoop.js';
+import { OptimizedAgentLoop } from '../../../core/src/session/OptimizedAgentLoop.js';
 import { ModelClient } from '../../../core/src/model/ModelClient.js';
 import { ModelConnectionTester } from '../../../core/src/model/ModelConnectionTester.js';
 import { McpManager } from '../../../core/src/mcp/McpManager.js';
 import { SkillRegistry } from '../../../core/src/extensions/SkillRegistry.js';
 import { SkillInstaller } from '../../../core/src/extensions/SkillInstaller.js';
-import { ContextCompressor } from '../../../core/src/context/ContextCompressor.js';
+import { OptimizedContextCompressor } from '../../../core/src/context/OptimizedContextCompressor.js';
 import { ApprovalManager } from '../../../core/src/security/ApprovalManager.js';
 import { HookExecutor } from '../../../core/src/security/HookExecutor.js';
 import { NovaError, getErrorMessage } from '../../../core/src/types/errors.js';
@@ -43,6 +43,7 @@ import {
   listDirectoryHandler,
   searchFileHandler,
   searchContentHandler,
+  globHandler,
   shellHandler,
   webSearchHandler,
   webFetchHandler,
@@ -50,6 +51,12 @@ import {
   memoryWriteHandler,
   todoHandler,
   taskHandler,
+  imageProcessorHandler,
+  lspHandler,
+  applyPatchHandler,
+  multieditHandler,
+  truncateHandler,
+  questionHandler,
 } from '../../../core/src/tools/impl/index.js';
 import {
   readFileSchema,
@@ -65,6 +72,12 @@ import {
   memoryWriteSchema,
   todoSchema,
   taskSchema,
+  globSchema,
+  lspSchema,
+  applyPatchSchema,
+  multieditSchema,
+  truncateSchema,
+  questionSchema,
 } from '../../../core/src/tools/schemas/index.js';
 import type { NovaConfig } from '../../../core/src/types/config.js';
 import { OllamaManager } from '../../../core/src/model/providers/OllamaManager.js';
@@ -108,6 +121,10 @@ export class NovaApp {
       await this.authManager.loadCredentials();
 
       // 4. Handle special commands
+      if (args.command === 'set') {
+        await this.handleSetCommand(args);
+        return;
+      }
       if (args.command === 'config') {
         await this.handleConfigCommand(args);
         return;
@@ -252,9 +269,8 @@ export class NovaApp {
     this.sessionManager = new SessionManager();
 
     // Context Compressor (intelligent context management)
-    this.contextCompressor = new ContextCompressor({
+    this.contextCompressor = new OptimizedContextCompressor({
       maxTokens: config.core.maxTokens * 8 || 128000,
-      summaryModel: config.core.defaultModel,
     });
 
     // Model Connection Tester
@@ -365,6 +381,39 @@ export class NovaApp {
       selectedTools.push('task');
     }
 
+    // LSP tools (if user mentions definition, reference, hover, rename, diagnostics)
+    if (promptLower.includes('定义') || promptLower.includes('definition') ||
+        promptLower.includes('引用') || promptLower.includes('reference') ||
+        promptLower.includes('重命名') || promptLower.includes('rename') ||
+        promptLower.includes('诊断') || promptLower.includes('diagnostic') ||
+        promptLower.includes('lsp')) {
+      selectedTools.push('lsp');
+    }
+
+    // Patch tools (if user mentions patch, diff)
+    if (promptLower.includes('补丁') || promptLower.includes('patch') ||
+        promptLower.includes('diff') || promptLower.includes('差异')) {
+      selectedTools.push('apply_patch');
+    }
+
+    // Multiedit tools (if user mentions multiple edits, batch edit)
+    if (promptLower.includes('批量') || promptLower.includes('multiple') ||
+        promptLower.includes('同时') || promptLower.includes('simultaneously')) {
+      selectedTools.push('multiedit');
+    }
+
+    // Truncate tools (if user mentions large output, truncation)
+    if (promptLower.includes('截断') || promptLower.includes('truncate') ||
+        promptLower.includes('输出') && promptLower.includes('大')) {
+      selectedTools.push('truncate');
+    }
+
+    // Question tools (if user mentions ask, question, interact)
+    if (promptLower.includes('询问') || promptLower.includes('question') ||
+        promptLower.includes('交互') || promptLower.includes('用户')) {
+      selectedTools.push('question');
+    }
+
     // Remove duplicates
     return [...new Set(selectedTools)];
   }
@@ -379,12 +428,19 @@ export class NovaApp {
       { name: 'execute_command', handler: shellHandler, schema: executeCommandSchema },
       { name: 'search_file', handler: searchFileHandler, schema: searchFileSchema },
       { name: 'search_content', handler: searchContentHandler, schema: searchContentSchema },
+      { name: 'glob', handler: globHandler, schema: globSchema },
       { name: 'web_search', handler: webSearchHandler, schema: webSearchSchema },
       { name: 'web_fetch', handler: webFetchHandler, schema: webFetchSchema },
       { name: 'memory_read', handler: memoryReadHandler, schema: memoryReadSchema },
       { name: 'memory_write', handler: memoryWriteHandler, schema: memoryWriteSchema },
       { name: 'todo', handler: todoHandler, schema: todoSchema },
       { name: 'task', handler: taskHandler, schema: taskSchema },
+      { name: 'image_processor', handler: imageProcessorHandler, schema: { type: 'object' as const, properties: { imagePath: { type: 'string' }, operation: { type: 'string', enum: ['ocr', 'structure', 'metadata'] }, options: { type: 'object' } }, required: ['imagePath'] } },
+      { name: 'lsp', handler: lspHandler, schema: lspSchema },
+      { name: 'apply_patch', handler: applyPatchHandler, schema: applyPatchSchema },
+      { name: 'multiedit', handler: multieditHandler, schema: multieditSchema },
+      { name: 'truncate', handler: truncateHandler, schema: truncateSchema },
+      { name: 'question', handler: questionHandler, schema: questionSchema },
     ];
 
     // Select tools based on prompt (if provided) or use minimal mode
@@ -392,11 +448,13 @@ export class NovaApp {
     if (prompt && !minimal) {
       selectedToolNames = this.selectToolsForPrompt(prompt, minimal);
       console.log(`Using ${selectedToolNames.length} tools based on your prompt`);
+      console.log(`Selected tools: ${selectedToolNames.join(', ')}`);
     } else {
-      // Use essential tools only in minimal mode (saves ~1000 tokens)
+      // Use all tools if no prompt (not minimal)
       selectedToolNames = minimal 
         ? ['read_file', 'write_file', 'edit_file', 'list_directory', 'execute_command']
         : allTools.map(t => t.name);
+      console.log(`Using ${selectedToolNames.length} tools (full toolset)`);
     }
 
     // Filter out web_search tool if model has built-in search capability
@@ -410,6 +468,10 @@ export class NovaApp {
 
     // Register selected tools
     const toolsToRegister = allTools.filter(t => selectedToolNames.includes(t.name));
+    console.log(`\n🔧 Registering ${toolsToRegister.length} tools:`);
+    for (const tool of toolsToRegister) {
+      console.log(`  - ${tool.name}`);
+    }
     
     for (const { name, handler, schema } of toolsToRegister) {
       this.toolRegistry.register({
@@ -421,6 +483,7 @@ export class NovaApp {
         riskLevel: this.getToolRisk(name),
       }, handler);
     }
+    console.log(`✅ Total registered tools: ${this.toolRegistry.getToolNames().length}\n`);
   }
 
   private getToolDescription(name: string): string {
@@ -438,17 +501,27 @@ export class NovaApp {
       memory_write: 'Write a value to persistent memory with optional TTL and tags. Use to remember important context across turns.',
       todo: 'Track tasks and progress. Use "create" to add tasks, "update" to change status (pending/in_progress/completed), "list" to show current state. Break complex tasks into sub-tasks and track progress.',
       task: 'Launch a sub-agent to perform a specific task. Use subagentType: code-explorer (analyze code), research (gather info), or executor (perform actions).',
+      glob: 'Advanced file search using glob patterns. Supports directories, dotfiles, absolute paths. Use when search_file is not flexible enough. Pattern examples: "src/**/*.ts", "**/*.test.ts".',
+      lsp: 'Language Server Protocol integration. Use for definition lookup, references, hover, rename, and diagnostics. Requires LSP server running.',
+      apply_patch: 'Apply a unified diff patch to files. Supports dry-run preview. Use for applying multiple changes at once or external patches.',
+      multiedit: 'Edit multiple locations in a file simultaneously. Supports fuzzy matching for imprecise context. Best for repetitive patterns.',
+      truncate: 'Intelligently truncate long outputs to stay within token limits. Saves to disk and provides retrieval hints. Use for large tool results.',
+      question: 'Ask the user a question interactively. Supports multiple choice and custom answers. Use when you need user input or clarification.',
     };
     return descriptions[name] || name;
   }
 
   private getToolCategory(name: string): 'file' | 'search' | 'execution' | 'web' | 'memory' | 'orchestration' {
-    if (name.startsWith('read_') || name.startsWith('write_') || name.startsWith('edit_') || name.startsWith('list_')) return 'file';
-    if (name.startsWith('search_')) return 'search';
+    if (name.startsWith('read_') || name.startsWith('write_') || name.startsWith('edit_') || name.startsWith('list_') || name === 'apply_patch' || name === 'multiedit') return 'file';
+    if (name.startsWith('search_') || name === 'glob') return 'search';
     if (name.startsWith('execute_')) return 'execution';
     if (name.startsWith('web_')) return 'web';
     if (name === 'todo' || name === 'task') return 'orchestration';
     if (name.startsWith('memory_')) return 'memory';
+    if (name === 'image_processor' || name === 'file_processor') return 'file';
+    if (name === 'lsp') return 'file';
+    if (name === 'question') return 'orchestration';
+    if (name === 'truncate') return 'orchestration';
     return 'orchestration';
   }
 
@@ -462,8 +535,8 @@ export class NovaApp {
 
   private getToolRisk(name: string): 'low' | 'medium' | 'high' | 'critical' {
     const critical = new Set(['execute_command']);
-    const high = new Set(['write_file', 'edit_file', 'task']);
-    const low = new Set(['read_file', 'list_directory', 'search_file', 'search_content', 'memory_read', 'web_search', 'web_fetch']);
+    const high = new Set(['write_file', 'edit_file', 'task', 'apply_patch', 'multiedit']);
+    const low = new Set(['read_file', 'list_directory', 'search_file', 'search_content', 'memory_read', 'web_search', 'web_fetch', 'lsp', 'question']);
     if (critical.has(name)) return 'critical';
     if (high.has(name)) return 'high';
     if (low.has(name)) return 'low';
@@ -613,9 +686,10 @@ export class NovaApp {
       approvalMode: config.core.defaultApprovalMode,
       minimal,
       supportsBuiltinSearch: modelConfigResult?.model?.supportsBuiltinSearch,
+      toolRegistry: this.toolRegistry,
     });
 
-    const agentLoop = new AgentLoop({
+    const agentLoop = new OptimizedAgentLoop({
       modelClient,
       sessionManager: this.sessionManager,
       toolRegistry: this.toolRegistry,
@@ -640,11 +714,168 @@ export class NovaApp {
       onApprovalRequired: async (request) => {
         return { requestId: request.id, approved: true };
       },
+      // OptimizedAgentLoop specific options
+      maxConcurrentTools: 3,
+      incrementalCompression: true,
     });
 
     const result = await agentLoop.runStream(session.id, prompt);
     const totalTokens = result.totalInputTokens + result.totalOutputTokens;
     console.log(chalk.default.gray(`\n---\n${result.turnsCompleted} turn${result.turnsCompleted > 1 ? 's' : ''} | ${totalTokens} tokens (${result.totalInputTokens} in / ${result.totalOutputTokens} out)`));
+  }
+
+  // ==================== Set Command (Quick Config) ====================
+
+  private async handleSetCommand(args: ReturnType<typeof parseCliArgs>): Promise<void> {
+    let baseUrl = args.baseUrl;
+    const apiKey = args.apiKey;
+    const modelName = args.model;
+    const providerName = args.provider;
+    const providerType = args.providerType;
+
+    if (!baseUrl) {
+      console.log('');
+      console.log('\x1b[1mQuick Configuration\x1b[0m\n');
+      console.log('Set API endpoint, key and model in one command.\n');
+      console.log('  \x1b[36mnova set <base-url> [api-key] [-m model] [-n name] [-t type]\x1b[0m\n');
+      console.log('Arguments:');
+      console.log('  \x1b[90mbase-url\x1b[0m          API endpoint URL (required)');
+      console.log('  \x1b[90mapi-key\x1b[0m          API key (optional for local models)');
+      console.log('  \x1b[90m-m, --model\x1b[0m      Model ID (default: auto-detect)');
+      console.log('  \x1b[90m-n, --name\x1b[0m      Provider name (default: from URL)');
+      console.log('  \x1b[90m-t, --type\x1b[0m      Provider type: custom|anthropic|openai|ollama (default: custom)\n');
+      console.log('Examples:');
+      console.log('  \x1b[90mnova set https://api.example.com/v1 sk-xxx -m gpt-4o\x1b[0m');
+      console.log('  \x1b[90mnova set http://localhost:11434\x1b[0m');
+      console.log('  \x1b[90mnova set https://api.deepseek.com sk-xxx -m deepseek-chat\x1b[0m');
+      console.log('  \x1b[90mnova set https://dashscope.aliyuncs.com/compatible-mode/v1 sk-xxx -m qwen-max\x1b[0m');
+      console.log('  \x1b[90mnova set https://open.bigmodel.cn/api/paas/v4 sk-xxx -m glm-4-plus\x1b[0m');
+      console.log('');
+      return;
+    }
+
+    // Clean up baseUrl: remove trailing slashes and common endpoint suffixes
+    // that providers may auto-append (e.g., /chat/completions, /completions)
+    baseUrl = baseUrl.replace(/\/+$/, ''); // Remove trailing slashes
+    baseUrl = baseUrl.replace(/\/(chat\/completions|completions|embeddings|v1\/chat\/completions)$/i, '');
+
+    // Auto-generate provider name from URL
+    let name = providerName;
+    if (!name) {
+      try {
+        const url = new URL(baseUrl);
+        const parts = url.hostname.split('.');
+        name = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+        // Sanitize for use as config key
+        name = name.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
+      } catch {
+        name = 'custom-api';
+      }
+    }
+
+    const type = providerType || 'custom';
+    const key = apiKey || 'no-key-required';
+
+    // Probe available models from the API
+    console.log(`\x1b[90mProbing ${baseUrl} for available models...\x1b[0m`);
+    let availableModels: string[] = [];
+    let defaultModel = modelName || '';
+
+    try {
+      const { OpenAICompatibleProvider } = await import('../../../core/src/model/providers/OpenAICompatibleProvider.js');
+      const probe = new (class extends OpenAICompatibleProvider {
+        constructor() {
+          super({ apiKey: key, baseUrl, model: 'probe' });
+        }
+        get name() { return 'probe'; }
+      })();
+      availableModels = await probe.listModels();
+    } catch {
+      // Silently continue - some providers may not support model listing
+    }
+
+    // Determine default model
+    if (!defaultModel && availableModels.length > 0) {
+      const preferred = ['gpt-4o', 'gpt-4', 'claude', 'glm-5', 'glm-4', 'deepseek', 'qwen', 'llama'];
+      for (const p of preferred) {
+        const found = availableModels.find((m: string) => m.toLowerCase().includes(p));
+        if (found) { defaultModel = found; break; }
+      }
+      if (!defaultModel) defaultModel = availableModels[0];
+    }
+    if (!defaultModel) defaultModel = 'default';
+
+    // Save credentials
+    await this.authManager.setCredentials({
+      provider: name,
+      apiKey: key,
+      baseUrl,
+    });
+
+    // Register provider in config
+    const config = this.configManager.getConfig();
+    const existingProvider = config.models.providers[name];
+
+    if (!existingProvider) {
+      this.configManager.registerProvider(name, {
+        type: type as any,
+        baseUrl,
+        models: {
+          [defaultModel]: {
+            name: defaultModel,
+            maxContextTokens: 128000,
+            maxOutputTokens: 8192,
+            supportsVision: false,
+            supportsTools: true,
+            supportsStreaming: true,
+            supportsThinking: false,
+          },
+        },
+        defaultModel,
+      });
+    } else if (!existingProvider.models[defaultModel]) {
+      existingProvider.models[defaultModel] = {
+        name: defaultModel,
+        maxContextTokens: 128000,
+        maxOutputTokens: 8192,
+        supportsVision: false,
+        supportsTools: true,
+        supportsStreaming: true,
+        supportsThinking: false,
+      };
+      existingProvider.defaultModel = defaultModel;
+      // Update baseUrl if changed
+      if (baseUrl && existingProvider.type === 'custom') {
+        existingProvider.baseUrl = baseUrl;
+      }
+    }
+
+    // Set as default model
+    const fullModelId = `${name}/${defaultModel}`;
+    config.core.defaultModel = fullModelId;
+    await this.configManager.save(config);
+
+    // Display result
+    console.log('');
+    console.log('\x1b[32m✓ Configuration saved\x1b[0m');
+    console.log(`  Provider: \x1b[36m${name}\x1b[0m (${type})`);
+    console.log(`  Base URL: ${baseUrl}`);
+    if (apiKey) console.log(`  API Key:  ${'*'.repeat(Math.min(apiKey.length, 20))}${apiKey.length > 20 ? '...' : ''}`);
+    if (availableModels.length > 0) {
+      console.log(`  Models:   ${availableModels.length} found`);
+      const shown = availableModels.slice(0, 5);
+      for (const m of shown) {
+        const marker = m === defaultModel ? ' \x1b[33m← default\x1b[0m' : '';
+        console.log(`    - ${m}${marker}`);
+      }
+      if (availableModels.length > 5) console.log(`    ... and ${availableModels.length - 5} more`);
+    } else {
+      console.log(`  Model:    ${fullModelId}`);
+    }
+    console.log('');
+    console.log(`\x1b[36mDefault model set to \x1b[33m${fullModelId}\x1b[36m. Run \x1b[1mnova\x1b[0m to start.\x1b[0m`);
+    console.log(`\x1b[90mTo switch: nova -m ${name}/<model-id>\x1b[0m`);
+    console.log('');
   }
 
   private async handleConfigCommand(args: ReturnType<typeof parseCliArgs>): Promise<void> {
@@ -1204,8 +1435,21 @@ export class NovaApp {
         console.error('Usage: nova provider remove <name>');
         return;
       }
+      const config = this.configManager.getConfig();
+      const exists = !!config.models.providers[providerName];
+      if (!exists) {
+        console.error(`\x1b[31mProvider "${providerName}" not found.\x1b[0m`);
+        console.error(`  Run \x1b[36mnova provider list\x1b[0m to see available providers.`);
+        return;
+      }
+      // Remove from credentials (API key)
       await this.authManager.removeCredentials(providerName);
-      console.log(`Provider "${providerName}" removed`);
+      // Remove from config (models, aliases, defaultModel)
+      this.configManager.removeProvider(providerName);
+      await this.configManager.save(this.configManager.getConfig());
+      console.log(`\x1b[32mProvider "${providerName}" removed completely.\x1b[0m`);
+      const newDefault = this.configManager.getConfig().core.defaultModel;
+      console.log(`  Default model: \x1b[36m${newDefault}\x1b[0m`);
       return;
     }
 
@@ -1807,6 +2051,7 @@ export class NovaApp {
     console.log(cmd('model list', 'List all available models'));
     console.log(cmd('config show/edit', 'Show or edit configuration'));
     console.log(cmd('auth set <provider>', 'Configure API key'));
+    console.log(cmd('set <url> [key] -m model', 'Quick config API endpoint + key + model'));
     console.log(cmd('coding-plan list', 'List Coding Plan platforms'));
     console.log(cmd('coding-plan add', 'Add Coding Plan provider'));
     console.log(cmd('mcp status', 'Show MCP server connections'));

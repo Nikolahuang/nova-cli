@@ -2,15 +2,36 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ToolHandler, ToolHandlerInput, ToolHandlerOutput } from '../../types/tools.js';
 import { ToolError } from '../../types/errors.js';
+import { FileFilter } from '../../security/FileFilter.js';
 
 export const editFileHandler: ToolHandler = async (input: ToolHandlerInput): Promise<ToolHandlerOutput> => {
-  const { filePath, oldText, newText, allOccurrences = false, dryRun = false } = input.params as {
+  const { filePath, oldText, newText, allOccurrences = false, dryRun = false, allowExternalAccess = false, additionalAllowedPaths = [] } = input.params as {
     filePath: string;
     oldText: string;
     newText: string;
     allOccurrences?: boolean;
     dryRun?: boolean;
+    allowExternalAccess?: boolean;
+    additionalAllowedPaths?: string[];
   };
+
+  // Create a temporary FileFilter to validate file access if external access is not allowed
+  let fileFilter: FileFilter | undefined;
+  if (!allowExternalAccess) {
+    fileFilter = new FileFilter({
+      ignorePatterns: ['node_modules/**', '.git/**', 'dist/**', 'build/**', '*.log', '.env', '.env.local'],
+      workingDirectory: process.cwd(),
+      maxFileSize: 10 * 1024 * 1024,
+      maxBatchSize: 100,
+      allowExternalAccess: allowExternalAccess,
+      additionalAllowedPaths: additionalAllowedPaths,
+    });
+    
+    const accessCheck = fileFilter.isAllowed(filePath);
+    if (!accessCheck.allowed) {
+      throw new ToolError(`File access denied: ${accessCheck.reason}`, 'edit_file');
+    }
+  }
 
   const resolvedPath = path.resolve(filePath);
 
@@ -50,23 +71,25 @@ export const editFileHandler: ToolHandler = async (input: ToolHandlerInput): Pro
       const newLines = newContent.split('\n');
       const preview = generateDiffPreview(oldLines, newLines);
       return {
-        content: `Dry run preview for ${resolvedPath}:\n${preview}\n\n${occurrences} occurrence(s) would be replaced.`,
-        metadata: { dryRun: true, occurrences, path: resolvedPath },
+        content: `Dry run preview for ${resolvedPath}:\n${preview}\n\n${occurrences} occurrence(s) would be replaced.${allowExternalAccess ? '' : '\n\nNote: External file access is disabled by default for security.'}`,
+        metadata: { dryRun: true, occurrences, path: resolvedPath, allowExternalAccess, additionalAllowedPaths },
       };
     }
 
     await fs.writeFile(resolvedPath, newContent, 'utf-8');
 
-    return {
-      content: `Successfully replaced ${occurrences} occurrence(s) in ${resolvedPath}`,
-      metadata: {
-        path: resolvedPath,
-        occurrences,
-        oldSize: Buffer.byteLength(content, 'utf-8'),
-        newSize: Buffer.byteLength(newContent, 'utf-8'),
-      },
-      filesAffected: [resolvedPath],
-    };
+return {
+    content: `Successfully replaced ${occurrences} occurrence(s) in ${resolvedPath}${allowExternalAccess ? '' : '\n\nNote: External file access is disabled by default for security.'}`,
+    metadata: {
+      path: resolvedPath,
+      occurrences,
+      oldSize: Buffer.byteLength(content, 'utf-8'),
+      newSize: Buffer.byteLength(newContent, 'utf-8'),
+      allowExternalAccess,
+      additionalAllowedPaths,
+    },
+    filesAffected: [resolvedPath],
+  };
   } catch (err) {
     if (err instanceof ToolError) throw err;
     const code = (err as NodeJS.ErrnoException).code;

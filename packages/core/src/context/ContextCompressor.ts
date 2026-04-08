@@ -109,6 +109,18 @@ export class ContextCompressor {
   private sessionId: SessionId | null = null;
   private maxTokens: number;
 
+  // Compression history tracking
+  private compressionHistory: Array<{
+    action: CompressionAction;
+    timestamp: Date;
+    originalTokens: number;
+    resultingTokens: number;
+  }> = [];
+  private totalTokensSaved = 0;
+
+  // Maximum tokens for tool results before truncation
+  private static readonly TOOL_RESULT_MAX_TOKENS = 10000;
+
   constructor(options?: ContextCompressorOptions | SessionId) {
     if (typeof options === 'string') {
       this.sessionId = options;
@@ -120,12 +132,28 @@ export class ContextCompressor {
   }
 
   /**
+   * Truncate tool result content to stay within token budget.
+   * Applied before compression to reduce memory footprint.
+   */
+  truncateToolResult(content: string, maxTokens: number = ContextCompressor.TOOL_RESULT_MAX_TOKENS): string {
+    const maxChars = maxTokens * 4; // rough estimate
+    if (content.length <= maxChars) return content;
+    const truncated = content.slice(0, maxChars);
+    return truncated + '\n\n[Tool output was truncated; re-invoke if you need the full output.]';
+  }
+
+  /**
    * Analyze the context state and determine the best compression action.
    */
   shouldCompress(state: ContextState): CompressionAction {
     const usage = state.tokenUsage / state.maxTokens;
 
-    if (usage < DEFAULT_OPTIONS.compressThreshold) {
+    // Adaptive: lower threshold if we've compressed many times (context is growing fast)
+    const adaptiveCompressThreshold = this.compressionHistory.length > 5 
+      ? Math.max(0.4, DEFAULT_OPTIONS.compressThreshold - 0.1) 
+      : DEFAULT_OPTIONS.compressThreshold;
+
+    if (usage < adaptiveCompressThreshold) {
       return 'keep';
     }
 
@@ -137,7 +165,7 @@ export class ContextCompressor {
       return 'summarize';
     }
 
-    // Between 60-85%: light compression
+    // Between threshold and aggressive: light compression
     return 'compress';
   }
 
@@ -214,6 +242,17 @@ export class ContextCompressor {
     compressedMessages.push(...recentMessages);
 
     const resultingTokens = this.estimateMessagesTokens(compressedMessages);
+
+    // Track compression history
+    if (action === 'compress' || action === 'summarize' || action === 'retrieve') {
+      this.compressionHistory.push({
+        action,
+        timestamp: new Date(),
+        originalTokens,
+        resultingTokens,
+      });
+      this.totalTokensSaved += (originalTokens - resultingTokens);
+    }
 
     return {
       action,
@@ -608,12 +647,15 @@ export class ContextCompressor {
 
   /** Get compression history */
   getCompressionHistory(): Array<{ action: CompressionAction; timestamp: Date; originalTokens: number; resultingTokens: number }> {
-    return [];
+    return [...this.compressionHistory];
   }
 
   /** Get compressor stats */
   getStats(): { totalCompressions: number; tokensSaved: number } {
-    return { totalCompressions: 0, tokensSaved: 0 };
+    return { 
+      totalCompressions: this.compressionHistory.length, 
+      tokensSaved: this.totalTokensSaved 
+    };
   }
 
   private estimateTokensText(text: string): number {

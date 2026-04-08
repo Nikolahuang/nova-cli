@@ -149,6 +149,32 @@ export function parseCliArgs(argv: string[]): CliArgs {
       case '--host':
         args.ollamaHost = argv[++i];
         break;
+      // Command: set (quick config: nova set <base-url> <api-key> -m <model>)
+      case 'set': {
+        args.command = 'set';
+        // Parse positional args and flags
+        let argQueue: string[] = [];
+        let modelFlag = false;
+        let nameFlag = false;
+        let typeFlag = false;
+        for (let j = i + 1; j < argv.length; j++) {
+          const a = argv[j];
+          if (a === '-m' || a === '--model') { modelFlag = true; continue; }
+          if (a === '-n' || a === '--name') { nameFlag = true; continue; }
+          if (a === '-t' || a === '--type') { typeFlag = true; continue; }
+          if (modelFlag) { args.model = a; modelFlag = false; i = j; continue; }
+          if (nameFlag) { args.provider = a; nameFlag = false; i = j; continue; }
+          if (typeFlag) { args.providerType = a; typeFlag = false; i = j; continue; }
+          if (a.startsWith('--key=')) { args.apiKey = a.slice(6); i = j; continue; }
+          if (a.startsWith('--base-url=')) { args.baseUrl = a.slice(11); i = j; continue; }
+          argQueue.push(a);
+          i = j;
+        }
+        // Positional: base-url, api-key
+        if (argQueue.length >= 1) args.baseUrl = argQueue[0];
+        if (argQueue.length >= 2) args.apiKey = argQueue[1];
+        break;
+      }
       // Command: config
       case 'config':
         args.command = 'config';

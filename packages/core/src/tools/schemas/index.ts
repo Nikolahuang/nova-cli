@@ -9,3 +9,7 @@ export { webSearchSchema, webFetchSchema } from './web.js';
 export { memoryReadSchema, memoryWriteSchema } from './memory.js';
 export { taskSchema } from './orchestration.js';
 export { todoSchema } from './todo.js';
+export { fileProcessorSchema, fileProcessorToolDefinition } from './fileProcessorSchema.js';
+
+// Advanced tools
+export { lspSchema, applyPatchSchema, multieditSchema, truncateSchema, questionSchema } from './advanced.js';

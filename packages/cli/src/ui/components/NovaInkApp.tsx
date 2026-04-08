@@ -1,10 +1,12 @@
 // ============================================================================
 // NovaInkApp - Main Ink-based CLI application
+// Enhanced with theme system for better visual aesthetics
 // ============================================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import { StatusBar, InputBox, MessageList, ToolCallPanel, Spinner, ThinkingBlock } from './InkComponents.js';
+import { getTheme, Theme } from '../themes/theme-config.js';
 
 // ============================================================================
 // Types
@@ -45,10 +47,12 @@ interface NovaAppProps {
 }
 
 // ============================================================================
-// Help Screen Component
+// Help Screen Component - Enhanced with theme system
 // ============================================================================
 
 const HelpScreen: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => {
+  const t = getTheme();
+  
   useInput((char, key) => {
     if (key.escape || char === 'q') {
       onDismiss();
@@ -57,42 +61,42 @@ const HelpScreen: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => {
   
   return (
     <Box flexDirection="column" padding={1}>
-      <Text bold color="magenta">Nova CLI - Help</Text>
+      <Text bold color={t.colors.brand}>Nova CLI - Help</Text>
       <Text></Text>
       
-      <Text bold>Navigation</Text>
-      <Text dimColor>  /help        Show this help</Text>
-      <Text dimColor>  /quit        Exit Nova CLI</Text>
-      <Text dimColor>  /clear       Clear conversation</Text>
+      <Text bold color={t.colors.primary}>Navigation</Text>
+      <Text color={t.colors.dim}>  /help        Show this help</Text>
+      <Text color={t.colors.dim}>  /quit        Exit Nova CLI</Text>
+      <Text color={t.colors.dim}>  /clear       Clear conversation</Text>
       <Text></Text>
       
-      <Text bold>Model & Mode</Text>
-      <Text dimColor>  /model       Switch model (interactive)</Text>
-      <Text dimColor>  /mode        Cycle mode: AUTO → PLAN → ASK</Text>
-      <Text dimColor>  /status      Show session status</Text>
+      <Text bold color={t.colors.primary}>Model & Mode</Text>
+      <Text color={t.colors.dim}>  /model       Switch model (interactive)</Text>
+      <Text color={t.colors.dim}>  /mode        Cycle mode: AUTO → SMART → EDITS → PLAN → ASK</Text>
+      <Text color={t.colors.dim}>  /status      Show session status</Text>
       <Text></Text>
       
-      <Text bold>Memory & Context</Text>
-      <Text dimColor>  /init        Generate NOVA.md</Text>
-      <Text dimColor>  /memory      Manage memory</Text>
-      <Text dimColor>  /compact     Toggle compact mode</Text>
+      <Text bold color={t.colors.primary}>Memory & Context</Text>
+      <Text color={t.colors.dim}>  /init        Generate NOVA.md</Text>
+      <Text color={t.colors.dim}>  /memory      Manage memory</Text>
+      <Text color={t.colors.dim}>  /compact     Toggle compact mode</Text>
       <Text></Text>
       
-      <Text bold>Tools & Extensions</Text>
-      <Text dimColor>  /tools       List available tools</Text>
-      <Text dimColor>  /mcp         MCP server status</Text>
-      <Text dimColor>  /skills      Available skills</Text>
-      <Text dimColor>  /ollama      Ollama status</Text>
+      <Text bold color={t.colors.primary}>Tools & Extensions</Text>
+      <Text color={t.colors.dim}>  /tools       List available tools</Text>
+      <Text color={t.colors.dim}>  /mcp         MCP server status</Text>
+      <Text color={t.colors.dim}>  /skills      Available skills</Text>
+      <Text color={t.colors.dim}>  /ollama      Ollama status</Text>
       <Text></Text>
       
-      <Text bold>Shortcuts</Text>
-      <Text dimColor>  @file        Inject file content</Text>
-      <Text dimColor>  !command     Run shell command</Text>
-      <Text dimColor>  \            Multi-line input</Text>
-      <Text dimColor>  Tab          Command completion</Text>
+      <Text bold color={t.colors.primary}>Shortcuts</Text>
+      <Text color={t.colors.dim}>  @file        Inject file content</Text>
+      <Text color={t.colors.dim}>  !command     Run shell command</Text>
+      <Text color={t.colors.dim}>  \            Multi-line input</Text>
+      <Text color={t.colors.dim}>  Tab          Command completion</Text>
       <Text></Text>
       
-      <Text dimColor>Press Escape or Q to close</Text>
+      <Text color={t.colors.muted}>Press Escape or Q to close</Text>
     </Box>
   );
 };
@@ -262,10 +266,10 @@ export const NovaInkApp: React.FC<NovaAppProps> = ({
       <Box flexGrow={1} flexDirection="column" overflow="hidden" marginY={1}>
         {state.messages.length === 0 ? (
           <Box flexDirection="column" alignItems="center" justifyContent="center" height="100%">
-            <Text bold color="magenta">Nova CLI</Text>
-            <Text dimColor>AI-powered terminal assistant</Text>
+            <Text bold color={getTheme().colors.brand}>Nova CLI</Text>
+            <Text color={getTheme().colors.secondary}>AI-powered terminal assistant</Text>
             <Text></Text>
-            <Text dimColor>Type a message or /help for commands</Text>
+            <Text color={getTheme().colors.muted}>Type a message or /help for commands</Text>
           </Box>
         ) : (
           <MessageList messages={state.messages} />

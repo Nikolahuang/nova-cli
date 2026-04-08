@@ -10,9 +10,10 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { execSync, spawn } from 'node:child_process';
 import chalk from 'chalk';
+import { getTheme } from '../ui/themes/theme-config.js';
 import type { NovaConfig } from '../../../core/src/types/config.js';
 import type { SessionId, ApprovalRequest, ApprovalResponse } from '../../../core/src/types/session.js';
-import { AgentLoop } from '../../../core/src/session/AgentLoop.js';
+import { OptimizedAgentLoop } from '../../../core/src/session/OptimizedAgentLoop.js';
 import { ModelClient } from '../../../core/src/model/ModelClient.js';
 import { SessionManager } from '../../../core/src/session/SessionManager.js';
 import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.js';
@@ -50,16 +51,19 @@ export interface ReplOptions {
 }
 
 /** Interaction mode for the REPL */
-type InteractionMode = 'auto' | 'plan' | 'ask';
+type InteractionMode = 'auto' | 'smart' | 'edits' | 'plan' | 'ask';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Theme-aware mode labels
 const MODE_LABELS: Record<InteractionMode, { label: string; color: any; description: string; approvalMode: string }> = {
-  auto: { label: 'AUTO', color: chalk.green.bold,  description: 'Full autonomous - no approval needed', approvalMode: 'yolo' },
-  plan: { label: 'PLAN', color: chalk.yellow.bold, description: 'Plan first, then confirm each action',  approvalMode: 'plan' },
-  ask:  { label: 'ASK',  color: chalk.cyan.bold,   description: 'Answer only, no file changes',          approvalMode: 'plan' },
+  auto:  { label: 'AUTO',  color: chalk.hex(theme.colors.success).bold,  description: 'Full autonomous - no approval needed',       approvalMode: 'yolo' },
+  smart: { label: 'SMART', color: chalk.hex(theme.colors.info).bold,   description: 'Smart approval - auto low-risk, ask high-risk', approvalMode: 'smart' },
+  edits: { label: 'EDITS', color: chalk.hex(theme.colors.brand).bold,description: 'Auto-approve file edits, ask for shell/exec', approvalMode: 'accepting_edits' },
+  plan:  { label: 'PLAN',  color: chalk.hex(theme.colors.warning).bold, description: 'Plan first, then confirm each action',       approvalMode: 'plan' },
+  ask:   { label: 'ASK',   color: chalk.hex(theme.colors.cyan).bold,   description: 'Answer only, no file changes',              approvalMode: 'default' },
 };
 
-const MODES: InteractionMode[] = ['auto', 'plan', 'ask'];
+const MODES: InteractionMode[] = ['auto', 'smart', 'edits', 'plan', 'ask'];
 
 /** State for rendering tool calls */
 interface ToolCallState {
@@ -79,36 +83,41 @@ interface ToolCallState {
 
 const BOX = {
   tl: '╭', tr: '╮', bl: '╰', br: '╯',
-  h: '─', v: '│',
-  ht: '├', htr: '┤', cross: '┼',
+  h: '─', hThick: '━', hDouble: '═',
+  v: '│', vThick: '┃', vDouble: '║',
+  ht: '├', htr: '┤', hc: '┬', hcB: '┴',
+  vt: '┬', vtr: '┤', vc: '├', vcB: '┤',
   arrow: '›', bullet: '•', check: '✓', crossX: '✗', dot: '·',
   diamond: '◆', star: '★', circle: '○', circleFull: '●',
   spinner: ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'],
-  hThick: '━', vThick: '┃',
   arrowRight: '→', arrowLeft: '←', arrowUp: '↑', arrowDown: '↓',
+  // Modern icons
+  sparkles: '✨', brain: '🧠', lightning: '⚡', rocket: '🚀',
 };
 
+// Theme-aware color definitions
+const theme = getTheme();
 const C = {
-  brand:      chalk.hex('#7C3AED').bold,
-  brandLight: chalk.hex('#A78BFA'),
-  brandDim:   chalk.hex('#7C3AED').dim,
-  success:    chalk.hex('#10B981'),
-  successDim: chalk.hex('#10B981').dim,
-  warning:    chalk.hex('#F59E0B'),
-  warningDim: chalk.hex('#F59E0B').dim,
-  error:      chalk.hex('#EF4444'),
-  errorDim:   chalk.hex('#EF4444').dim,
-  info:       chalk.hex('#3B82F6'),
-  infoDim:    chalk.hex('#3B82F6').dim,
-  primary:    chalk.white,
-  muted:      chalk.gray,
-  dim:        chalk.hex('#6B7280'),
-  toolName:   chalk.hex('#22D3EE'),
-  toolOk:     chalk.hex('#6EE7B7'),
-  toolErr:    chalk.hex('#FCA5A5'),
-  turnLine:   chalk.hex('#374151').dim,
-  accent:     chalk.hex('#F472B6'),
-  subtle:     chalk.hex('#4B5563'),
+  brand:      chalk.hex(theme.colors.brand).bold,
+  brandLight: chalk.hex(theme.colors.brandLight),
+  brandDim:   chalk.hex(theme.colors.brandDark).dim,
+  success:    chalk.hex(theme.colors.success),
+  successDim: chalk.hex(theme.colors.successLight).dim,
+  warning:    chalk.hex(theme.colors.warning),
+  warningDim: chalk.hex(theme.colors.warningLight).dim,
+  error:      chalk.hex(theme.colors.error),
+  errorDim:   chalk.hex(theme.colors.errorLight).dim,
+  info:       chalk.hex(theme.colors.info),
+  infoDim:    chalk.hex(theme.colors.infoLight).dim,
+  primary:    chalk.hex(theme.colors.primary),
+  muted:      chalk.hex(theme.colors.secondary),
+  dim:        chalk.hex(theme.colors.dim),
+  toolName:   chalk.hex(theme.colors.cyanLight),
+  toolOk:     chalk.hex(theme.colors.successLight),
+  toolErr:    chalk.hex(theme.colors.errorLight),
+  turnLine:   chalk.hex(theme.colors.borderDim).dim,
+  accent:     chalk.hex(theme.colors.pink),
+  subtle:     chalk.hex(theme.colors.hint),
 };
 
 // ============================================================================
@@ -418,7 +427,7 @@ export class InteractiveRepl {
       { text: '/clear', description: 'Clear conversation' },
       { text: '/status', description: 'Session info' },
       { text: '/model', description: 'Switch model' },
-      { text: '/mode', description: 'Change mode (auto/plan/ask)' },
+      { text: '/mode', description: 'Change mode (auto/smart/edits/plan/ask)' },
       { text: '/init', description: 'Generate NOVA.md' },
       { text: '/memory', description: 'Manage memory' },
       { text: '/history', description: 'Session history' },
@@ -730,39 +739,39 @@ export class InteractiveRepl {
     // Use a reasonable max width, but don't exceed terminal width
     const w = Math.min(termCols - 4, 76);
     
-    const hr = C.brandDim(BOX.h.repeat(w));
-    const hrThick = C.brand(BOX.hThick.repeat(w));
-    const vl = C.brandDim(BOX.v);
+    const hr = C.dim('─'.repeat(w));
+    const hrBrand = C.brand('━'.repeat(w));
+    const vl = C.dim('│');
 
-    // Simple compact header instead of big ASCII art
+    // Modern enhanced header
     console.log('');
-    console.log(C.brand(BOX.tl) + hrThick + C.brand(BOX.tr));
+    console.log(C.brand('╭') + hrBrand + C.brand('╮'));
     
-    // Compact logo line
-    const logoLine = C.brand('  NOVA ') + C.brandLight('CLI') + C.dim(' · AI-powered terminal assistant');
-    const logoPadding = Math.max(0, w - 38); // 38 = visible chars in logoLine (without ANSI codes)
+    // Enhanced logo line with icons
+    const logoLine = `  ${C.brand('✦')} ${C.brand('NOVA')} ${C.brandLight('CLI')} ${C.dim('✦')} ${C.secondary('AI-powered terminal assistant')}`;
+    const logoPadding = Math.max(0, w - 42); // Adjust for visible chars
     console.log(vl + logoLine + ' '.repeat(logoPadding) + vl);
     
-    console.log(C.brand(BOX.ht) + hr + C.brand(BOX.htr));
+    console.log(C.brand('├') + hr + C.brand('┤'));
 
-    // Status line 1: Model | Dir
-    const modelLabel = C.dim('Model: ');
+    // Status line 1: Model | Dir - Enhanced with icons
+    const modelLabel = C.dim('🤖 Model: ');
     const modelVal = C.primary(modelShort);
-    const dirLabel = C.dim('Dir: ');
+    const dirLabel = C.dim('📁 Dir: ');
     const dirVal = C.muted(this.cwd.length > 40 ? '...' + this.cwd.slice(-37) : this.cwd);
-    const line1 = `  ${modelLabel}${modelVal}  ${C.dim(BOX.v)}  ${dirLabel}${dirVal}`;
+    const line1 = `  ${modelLabel}${modelVal}  ${C.dim('│')}  ${dirLabel}${dirVal}`;
     console.log(vl + line1 + ' '.repeat(Math.max(0, w - 10 - modelShort.length)) + vl);
 
-    // Status line 2: Mode | Session
-    const modeLabel = C.dim('Mode:  ');
+    // Status line 2: Mode | Session - Enhanced with icons
+    const modeLabel = C.dim('⚙️ Mode:  ');
     const modeVal = modeInfo.color(modeInfo.label);
-    const sessLabel = C.dim('Session: ');
+    const sessLabel = C.dim('🆔 Session: ');
     const sessionText = this.restoreSessionId ? this.restoreSessionId.slice(0, 8) : 'new';
     const sessVal = C.muted(sessionText);
-    const line2 = `  ${modeLabel}${modeVal}  ${C.dim(BOX.v)}  ${sessLabel}${sessVal}`;
+    const line2 = `  ${modeLabel}${modeVal}  ${C.dim('│')}  ${sessLabel}${sessVal}`;
     console.log(vl + line2 + ' '.repeat(Math.max(0, w - 24)) + vl);
 
-    // Status line 3: MCP
+    // Status line 3: MCP - Enhanced with icons
     let mcpStatus = C.dim('○');
     let mcpText = 'none';
     if (this.mcpManager) {
@@ -770,18 +779,18 @@ export class InteractiveRepl {
       if (statuses.length > 0) {
         const connected = statuses.filter((s) => s.connected).length;
         const total = statuses.length;
-        mcpStatus = connected === total ? C.success(BOX.check) : connected > 0 ? C.warning('◐') : C.error(BOX.crossX);
+        mcpStatus = connected === total ? C.success('✓') : connected > 0 ? C.warning('◐') : C.error('✗');
         mcpText = `${connected}/${total}`;
       }
     }
-    const mcpLabel = C.dim('MCP:   ');
+    const mcpLabel = C.dim('🔌 MCP:   ');
     const line3 = `  ${mcpLabel}${mcpStatus} ${C.muted(mcpText)}`;
     console.log(vl + line3 + ' '.repeat(Math.max(0, w - 16)) + vl);
 
-    console.log(C.brand(BOX.ht) + hr + C.brand(BOX.htr));
+    console.log(C.brand('├') + hr + C.brand('┤'));
 
-    // Commands help - compact
-    const cmdLine = C.dim('  Commands: ') + 
+    // Commands help - compact with icons
+    const cmdLine = C.dim('  📋 Commands: ') + 
       C.primary('/help') + C.dim(', ') + 
       C.primary('/mode') + C.dim(', ') + 
       C.primary('/model') + C.dim(', ') + 
@@ -789,15 +798,15 @@ export class InteractiveRepl {
       C.primary('/quit');
     console.log(vl + cmdLine + ' '.repeat(Math.max(0, w - 52)) + vl);
 
-    // Shortcuts
-    const shortcutLine = C.dim('  Shortcuts: ') + 
+    // Shortcuts with icons
+    const shortcutLine = C.dim('  ⌨️ Shortcuts: ') + 
       C.info('@file') + C.dim(' inject, ') + 
       C.info('!cmd') + C.dim(' shell, ') + 
       C.info('\\') + C.dim(' multiline');
     console.log(vl + shortcutLine + ' '.repeat(Math.max(0, w - 52)) + vl);
 
     // Bottom border
-    console.log(C.brand(BOX.bl) + hrThick + C.brand(BOX.br));
+    console.log(C.brand('╰') + hrBrand + C.brand('╯'));
     console.log('');
   }
 
@@ -936,9 +945,10 @@ export class InteractiveRepl {
         model: this.modelClient.getModel(),
         approvalMode: effectiveApprovalMode,
         supportsBuiltinSearch: modelConfigResult?.model?.supportsBuiltinSearch,
+        toolRegistry: this.toolRegistry,
       });
 
-      const agentLoop = new AgentLoop({
+      const agentLoop = new OptimizedAgentLoop({
         modelClient: this.modelClient,
         sessionManager: this.sessionManager,
         toolRegistry: this.toolRegistry,
@@ -1017,6 +1027,10 @@ export class InteractiveRepl {
         onContextCompress: (orig, result, action) => {
           console.log(C.muted(`\n  ${BOX.arrow} context compressed: ${orig} → ${result} tokens (${action})`));
         },
+
+        // OptimizedAgentLoop specific options
+        maxConcurrentTools: 3,
+        incrementalCompression: true,
       });
 
       this.currentLoop = agentLoop;
@@ -1098,129 +1112,179 @@ export class InteractiveRepl {
   private startToolSpinner(state: ToolCallState): void {
     const idx = this.toolCallOrder.indexOf(state.toolCallId) + 1;
     const idxStr = idx.toString().padStart(2, '0');
-    const inputPreview = state.input ? ' ' + C.dim(state.input) : '';
+    
+    // Enhanced tool information display
+    const inputPreview = state.input ? `: ${state.input}` : '';
+    const maxInputLength = 30;
+    const truncatedInput = inputPreview.length > maxInputLength ? inputPreview.slice(0, maxInputLength) + '...' : inputPreview;
 
-    // Print the tool start line
+    // Print enhanced tool start line with more information
     process.stdout.write(
       '\n' +
-      C.dim('  ' + BOX.arrow + ' ') +
-      C.toolName(state.name) +
-      C.dim(` #${idxStr}`) +
-      inputPreview +
-      '  '
+      C.dim('┌─ ') +
+      C.toolName.bold(`Tool #${idxStr}: ${state.name}`) +
+      C.dim(` ${truncatedInput}`) +
+      '\n' +
+      C.dim('│ ') +
+      C.dim('Starting execution...')
     );
 
-    // Start inline spinner
+    // Start enhanced inline spinner with progress information
     this.spinnerFrame = 0;
     const chars = BOX.spinner;
     this.spinnerTimer = setInterval(() => {
       const elapsed = Date.now() - state.startTime;
       const elapsedStr = elapsed < 1000 ? `${elapsed}ms` : `${(elapsed / 1000).toFixed(1)}s`;
       const frame = chars[this.spinnerFrame % chars.length];
-      process.stdout.write(`\r  ${C.dim(frame)} ${C.toolName(state.name)}${C.dim(` #${idxStr}`)}${inputPreview}  ${C.dim(elapsedStr)}`);
+      
+      // Show detailed progress information
+      const progressText = `${C.dim('│ ')}${C.info.dim(frame)} ${C.dim('Working...')} ${C.dim(`(${elapsedStr}`)}${C.dim(')')}`;
+      process.stdout.write(`\r${progressText}`);
+      
       this.spinnerFrame++;
     }, 80);
   }
 
-  /** Print a finalized tool line (success or error) */
+  /** Print a finalized tool line (success or error) with enhanced information */
   private printToolLine(state: ToolCallState): void {
+    // Clear spinner
+    if (this.spinnerTimer) {
+      clearInterval(this.spinnerTimer);
+      this.spinnerTimer = null;
+    }
+
+    // Clear current line
+    process.stdout.write('\r' + ' '.repeat(100) + '\r');
+
     const duration = Date.now() - state.startTime;
     const durationStr = duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`;
     const idx = this.toolCallOrder.indexOf(state.toolCallId) + 1;
     const idxStr = idx.toString().padStart(2, '0');
-    const inputPreview = state.input ? ' ' + C.dim(state.input) : '';
+    
+    // Enhanced input preview
+    let inputPreview = '';
+    if (state.input) {
+      const maxInputLength = 40;
+      const truncatedInput = state.input.length > maxInputLength ? state.input.slice(0, maxInputLength) + '...' : state.input;
+      inputPreview = '\n' + C.dim('│ Input: ') + C.muted(truncatedInput);
+    }
 
     const icon = state.isError ? C.error(BOX.crossX) : C.success(BOX.check);
     const nameColor = state.isError ? C.toolErr : C.toolName;
 
-    // Result preview (one line)
+    // Enhanced result display with more details
     let resultPreview = '';
     if (state.isError) {
-      resultPreview = ' ' + C.error.dim(state.result.slice(0, 60).replace(/\n/g, ' '));
+      resultPreview = '\n' + C.dim('│ Error: ') + C.error.dim(state.result.slice(0, 100).replace(/\n/g, ' '));
     } else if (state.result.length > 0) {
       // Show first line of result as preview
-      const firstLine = state.result.split('\n')[0].slice(0, 60);
-      resultPreview = ' ' + C.dim(firstLine);
+      const firstLine = state.result.split('\n')[0].slice(0, 80);
+      resultPreview = '\n' + C.dim('│ Output: ') + C.dim(firstLine);
+      
+      // If result is long, show character count
+      if (state.result.length > 80) {
+        resultPreview += C.dim(` (${state.result.length} chars total)`);
+      }
     }
 
-    process.stdout.write('\r' + ' '.repeat(80) + '\r');
+    // Print complete tool execution result
     console.log(
-      C.dim('  ' + (state.isError ? BOX.crossX : BOX.check) + ' ') +
-      nameColor(state.name) +
+      C.dim('└─ ') +
+      icon + ' ' +
+      nameColor.bold(`${state.name}`) +
       C.dim(` #${idxStr}`) +
+      C.dim(` (${durationStr})`) +
       inputPreview +
-      '  ' +
-      (state.isError ? C.errorDim(durationStr) : C.successDim(durationStr)) +
       resultPreview
     );
   }
 
   private printTodoPanel(result: string): void {
-    if (!result || result === 'No tasks tracked.' || result === 'All tasks cleared.') {
-      this.todoProgressPanel.hide();
+    // Always show TODO panel for better visibility
+    if (!result) {
+      this.todoProgressPanel.setTodos([]);
+      this.todoProgressPanel.show();
+      return;
+    }
+
+    // Handle [object Object] case - try to parse as JSON
+    if (result.includes('[object Object]')) {
+      console.log(C.warning('  ⚠ TODO data format error - attempting recovery'));
+      this.todoProgressPanel.setTodos([]);
+      this.todoProgressPanel.show();
       return;
     }
 
     const lines = result.split('\n').filter((l) => l.trim());
     if (lines.length === 0) {
-      this.todoProgressPanel.hide();
+      this.todoProgressPanel.setTodos([]);
+      this.todoProgressPanel.show();
       return;
     }
 
     // Parse TODO items from the result string
     const todos: TodoItem[] = [];
     let idx = 0;
+    let parseErrors = 0;
 
     for (const line of lines) {
-      const pendingMatch = line.match(/^○\s+\[pending\s*\]\s+(.+)/);
-      const inProgressMatch = line.match(/^◉\s+\[in_progress\s*\]\s+(.+)/);
-      const completedMatch = line.match(/^●\s+\[completed\s*\]\s+(.+)/);
-      const failedMatch = line.match(/^✗\s+\[failed\s*\]\s+(.+)/);
+      try {
+        const pendingMatch = line.match(/^○\s+\[pending\s*\]\s+(.+)/);
+        const inProgressMatch = line.match(/^◉\s+\[in_progress\s*\]\s+(.+)/);
+        const completedMatch = line.match(/^●\s+\[completed\s*\]\s+(.+)/);
+        const failedMatch = line.match(/^✗\s+\[failed\s*\]\s+(.+)/);
 
-      // Detect priority from task text (high/medium/low keywords)
-      const detectPriority = (text: string): 'high' | 'medium' | 'low' | undefined => {
-        if (/high|critical|urgent|重要/i.test(text)) return 'high';
-        if (/low|minor|minor|低/i.test(text)) return 'low';
-        if (/medium|normal|中/i.test(text)) return 'medium';
-        return undefined;
-      };
+        // Detect priority from task text (high/medium/low keywords)
+        const detectPriority = (text: string): 'high' | 'medium' | 'low' | undefined => {
+          if (/high|critical|urgent|重要/i.test(text)) return 'high';
+          if (/low|minor|minor|低/i.test(text)) return 'low';
+          if (/medium|normal|中/i.test(text)) return 'medium';
+          return undefined;
+        };
 
-      if (completedMatch) {
-        todos.push({
-          id: String(idx++),
-          task: completedMatch[1].trim(),
-          status: 'completed',
-          priority: detectPriority(completedMatch[1]),
-        });
-      } else if (inProgressMatch) {
-        todos.push({
-          id: String(idx++),
-          task: inProgressMatch[1].trim(),
-          status: 'in_progress',
-          priority: detectPriority(inProgressMatch[1]),
-        });
-      } else if (pendingMatch) {
-        todos.push({
-          id: String(idx++),
-          task: pendingMatch[1].trim(),
-          status: 'pending',
-          priority: detectPriority(pendingMatch[1]),
-        });
-      } else if (failedMatch) {
-        todos.push({
-          id: String(idx++),
-          task: failedMatch[1].trim(),
-          status: 'failed',
-          priority: detectPriority(failedMatch[1]),
-        });
+        if (completedMatch) {
+          todos.push({
+            id: String(idx++),
+            task: completedMatch[1].trim(),
+            status: 'completed',
+            priority: detectPriority(completedMatch[1]),
+          });
+        } else if (inProgressMatch) {
+          todos.push({
+            id: String(idx++),
+            task: inProgressMatch[1].trim(),
+            status: 'in_progress',
+            priority: detectPriority(inProgressMatch[1]),
+          });
+        } else if (pendingMatch) {
+          todos.push({
+            id: String(idx++),
+            task: pendingMatch[1].trim(),
+            status: 'pending',
+            priority: detectPriority(pendingMatch[1]),
+          });
+        } else if (failedMatch) {
+          todos.push({
+            id: String(idx++),
+            task: failedMatch[1].trim(),
+            status: 'failed',
+            priority: detectPriority(failedMatch[1]),
+          });
+        }
+      } catch (e) {
+        parseErrors++;
+        // Skip malformed lines
+        continue;
       }
     }
 
-    // Update and show the fixed-position TODO panel
-    if (todos.length > 0) {
-      this.todoProgressPanel.setTodos(todos);
-      this.todoProgressPanel.show();
+    if (parseErrors > 0) {
+      console.log(C.warning(`  ⚠ Skipped ${parseErrors} malformed TODO entries`));
     }
+
+    // Always update and show the TODO panel (don't hide)
+    this.todoProgressPanel.setTodos(todos);
+    this.todoProgressPanel.show();
   }
 
   private renderProgressBar(pct: number, width: number): string {
@@ -2072,10 +2136,12 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
     // Mode
     const currentMode = MODE_LABELS[this.mode].label;
     console.log(section(`Mode ${C.dim('(current: ' + currentMode + ')')}`));
-    console.log(`${vl}  ${C.info('/mode'.padEnd(18))} ${C.muted('Cycle:')} ${C.success('AUTO')} ${C.dim('→')} ${C.warning('PLAN')} ${C.dim('→')} ${C.info('ASK')}${' '.repeat(w - 46)}${vl}`);
-    console.log(`${vl}  ${C.info('/mode auto'.padEnd(18))} ${C.success('AUTO')} ${C.dim('— full autonomous, no approval')}${' '.repeat(w - 49)}${vl}`);
-    console.log(`${vl}  ${C.info('/mode plan'.padEnd(18))} ${C.warning('PLAN')} ${C.dim('— confirm before each tool')}${' '.repeat(w - 47)}${vl}`);
-    console.log(`${vl}  ${C.info('/mode ask'.padEnd(18))} ${C.info('ASK')}  ${C.dim('— read-only, answer only')}${' '.repeat(w - 45)}${vl}`);
+    console.log(`${vl}  ${C.info('/mode'.padEnd(18))} ${C.muted('Cycle:')} ${C.success('AUTO')} ${C.dim('→')} ${C.blue('SMART')} ${C.dim('→')} ${C.magenta('EDITS')} ${C.dim('→')} ${C.warning('PLAN')} ${C.dim('→')} ${C.info('ASK')}${' '.repeat(w - 62)}${vl}`);
+    console.log(`${vl}  ${C.info('/mode auto'.padEnd(18))} ${C.success('AUTO')}   ${C.dim('- full autonomous, no approval')}${' '.repeat(w - 50)}${vl}`);
+    console.log(`${vl}  ${C.info('/mode smart'.padEnd(18))} ${C.blue('SMART')}  ${C.dim('- auto low-risk, ask high-risk')}${' '.repeat(w - 50)}${vl}`);
+    console.log(`${vl}  ${C.info('/mode edits'.padEnd(18))} ${C.magenta('EDITS')} ${C.dim('- auto file ops, ask shell')}${' '.repeat(w - 50)}${vl}`);
+    console.log(`${vl}  ${C.info('/mode plan'.padEnd(18))} ${C.warning('PLAN')}  ${C.dim('- confirm before each tool')}${' '.repeat(w - 50)}${vl}`);
+    console.log(`${vl}  ${C.info('/mode ask'.padEnd(18))} ${C.info('ASK')}   ${C.dim('- read-only, answer only')}${' '.repeat(w - 50)}${vl}`);
 
     // Memory
     console.log(section('Memory'));
@@ -2086,8 +2152,10 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
     // Extensions
     console.log(section('Extensions'));
     console.log(`${vl}${cmd('/mcp', 'MCP servers & tools')}${' '.repeat(w - 27)}${vl}`);
-    console.log(`${vl}${cmd('/skills', 'Available skills')}${' '.repeat(w - 26)}${vl}`);
-    console.log(`${vl}${cmd('/skills use', 'Inject skill into next msg')}${' '.repeat(w - 36)}${vl}`);
+    console.log(`${vl}${cmd('/skills', 'List available skills')}${' '.repeat(w - 28)}${vl}`);
+    console.log(`${vl}${cmd('/skills server', 'Browse GitHub skills market')}${' '.repeat(w - 36)}${vl}`);
+    console.log(`${vl}${cmd('/skills author select', 'Browse local SkillsHub')}${' '.repeat(w - 40)}${vl}`);
+    console.log(`${vl}${cmd('/skills user', 'Install from file/zip')}${' '.repeat(w - 32)}${vl}`);
     console.log(`${vl}${cmd('/theme', 'Switch color theme')}${' '.repeat(w - 26)}${vl}`);
     console.log(`${vl}${cmd('/checkpoint', 'File snapshots & rollback')}${' '.repeat(w - 35)}${vl}`);
     console.log(`${vl}${cmd('/image', 'Add image to chat')}${' '.repeat(w - 26)}${vl}`);
@@ -2190,15 +2258,33 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
     }
 
     const parts = (subcommand || '').split(/\s+/).filter(Boolean);
-    const cmd = parts[0];
-    const skillName = parts.slice(1).join(' ');
+    const mode = parts[0];
+    const rest = parts.slice(1).join(' ');
 
-    if (!cmd || cmd === 'list') {
+    // Mode 1: /skills server — Browse and install skills from GitHub repo
+    if (mode === 'server') {
+      await this.handleSkillsServerCommand();
+      return;
+    }
+
+    // Mode 2: /skills author select — Browse pre-downloaded skills from SkillsHub
+    if (mode === 'author' || mode === 'authorSkills') {
+      await this.handleSkillsAuthorCommand();
+      return;
+    }
+
+    // Mode 3: /skills user — Install skill from custom file/zip path
+    if (mode === 'user') {
+      await this.handleSkillsUserCommand();
+      return;
+    }
+
+    // Existing commands: list, use, info, install
+    if (!mode || mode === 'list') {
       const skills = await this.skillRegistry.list();
       if (skills.length === 0) {
         console.log(C.muted('  No skills found.'));
         console.log(C.muted('  Add SKILL.md files to ~/.nova/skills/ to create skills.'));
-        console.log(C.dim('  /skills install superpowers  — install popular skills'));
         return;
       }
       console.log('');
@@ -2212,21 +2298,23 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       }
       console.log('');
       console.log(C.muted(`  ${skills.length} skill${skills.length !== 1 ? 's' : ''} available`));
-      console.log(C.dim('  /skills use <name>   — inject skill into next message'));
-      console.log(C.dim('  /skills info <name>  — show skill details'));
-      console.log(C.dim('  /skills install <repo> — install from GitHub'));
+      console.log(C.dim('  /skills use <name>       — inject skill into next message'));
+      console.log(C.dim('  /skills info <name>      — show skill details'));
+      console.log(C.dim('  /skills server           — browse & install from GitHub'));
+      console.log(C.dim('  /skills author select    — browse local SkillsHub'));
+      console.log(C.dim('  /skills user             — install from file/zip path'));
       return;
     }
 
-    // Install skills from GitHub
-    if (cmd === 'install') {
-      await this.handleSkillsInstall(skillName);
+    // Install skills from GitHub (legacy)
+    if (mode === 'install') {
+      await this.handleSkillsInstall(rest);
       return;
     }
 
-    if (cmd === 'info' && skillName) {
-      const skill = await this.skillRegistry.get(skillName);
-      if (!skill) { console.log(C.error(`  Skill "${skillName}" not found.`)); return; }
+    if (mode === 'info' && rest) {
+      const skill = await this.skillRegistry.get(rest);
+      if (!skill) { console.log(C.error(`  Skill "${rest}" not found.`)); return; }
       const m = skill.metadata;
       console.log('');
       console.log(C.brand('  ' + m.name));
@@ -2242,16 +2330,418 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       return;
     }
 
-    if (cmd === 'use' && skillName) {
-      const skill = await this.skillRegistry.get(skillName);
-      if (!skill) { console.log(C.error(`  Skill "${skillName}" not found.`)); return; }
+    if (mode === 'use' && rest) {
+      const skill = await this.skillRegistry.get(rest);
+      if (!skill) { console.log(C.error(`  Skill "${rest}" not found.`)); return; }
       this._pendingSkillInject = skill;
-      console.log(C.success(`  Skill "${skillName}" will be injected into your next message.`));
+      console.log(C.success(`  Skill "${rest}" will be injected into your next message.`));
       return;
     }
 
-    console.log(C.warning(`  Unknown skills subcommand.`));
-    console.log(C.muted('  Usage: /skills [list|use <name>|info <name>|install <repo>]'));
+    console.log(C.warning(`  Unknown skills command.`));
+    console.log(C.muted('  Usage: /skills [list|use|info|server|author|user|install]'));
+  }
+
+  // ========================================================================
+  // /skills server — Browse & install skills from GitHub
+  // ========================================================================
+
+  private async handleSkillsServerCommand(): Promise<void> {
+    const SKILLS_REPO = 'daymade/claude-code-skills';
+    const API_URL = `https://api.github.com/repos/${SKILLS_REPO}/contents`;
+
+    console.log('');
+    console.log(C.brand('  Skills Marketplace — GitHub'));
+    console.log(C.dim('  ' + BOX.h.repeat(58)));
+    console.log(C.muted(`  Fetching skills from: github.com/${SKILLS_REPO}`));
+    console.log(C.dim('  Connecting...'));
+
+    try {
+      const response = await fetch(API_URL, {
+        headers: { 'Accept': 'application/vnd.github.v3+json' },
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`GitHub API returned ${response.status}`);
+      }
+
+      const contents = await response.json() as Array<{ name: string; type: string; path: string; download_url: string }>;
+      const folders = contents.filter(c => c.type === 'dir' && !c.name.startsWith('.'));
+
+      if (folders.length === 0) {
+        console.log(C.warning('  No skill folders found in repository.'));
+        return;
+      }
+
+      // Fetch each folder's SKILL.md to get description
+      console.log(C.muted('  Loading skill descriptions...'));
+      const skillsInfo: Array<{ name: string; description: string }> = [];
+      
+      // Fetch descriptions in parallel with limit
+      const batchSize = 5;
+      for (let i = 0; i < folders.length; i += batchSize) {
+        const batch = folders.slice(i, i + batchSize);
+        const results = await Promise.allSettled(
+          batch.map(async (folder) => {
+            const skillUrl = `https://api.github.com/repos/${SKILLS_REPO}/contents/${folder.name}/SKILL.md`;
+            const resp = await fetch(skillUrl, {
+              headers: { 'Accept': 'application/vnd.github.v3+json' },
+              signal: AbortSignal.timeout(10000),
+            });
+            if (!resp.ok) return { name: folder.name, description: '' };
+            const data = await resp.json() as { content: string; encoding: string };
+            if (data.encoding === 'base64') {
+              const content = Buffer.from(data.content, 'base64').toString('utf-8');
+              // Extract description from YAML frontmatter
+              const descMatch = content.match(/description:\s*(.+)/);
+              return { name: folder.name, description: descMatch ? descMatch[1].trim() : '' };
+            }
+            return { name: folder.name, description: '' };
+          })
+        );
+        for (const r of results) {
+          if (r.status === 'fulfilled') skillsInfo.push(r.value);
+        }
+      }
+
+      // Display interactive selection
+      console.log('');
+      console.log(C.brand(`  ${skillsInfo.length} skills available:`));
+      console.log(C.dim('  Use arrow keys to navigate, Enter to install, Esc to cancel'));
+      console.log('');
+
+      const selected = await this.arrowKeySelect(
+        skillsInfo.map(s => ({ name: s.name, desc: s.description })),
+        `Select a skill to install from ${SKILLS_REPO}`
+      );
+
+      if (!selected) {
+        console.log(C.muted('  Cancelled.'));
+        return;
+      }
+
+      // Install the selected skill
+      console.log('');
+      console.log(C.muted(`  Installing "${selected.name}" from GitHub...`));
+      const { SkillInstaller } = await import('../../../core/src/extensions/SkillInstaller.js');
+      const installer = new SkillInstaller();
+      const installed = await installer.install({
+        source: `https://github.com/${SKILLS_REPO}`,
+        skills: [selected.name],
+        force: true,
+      });
+
+      if (installed.length > 0) {
+        console.log(C.success(`  ✓ Installed "${selected.name}" successfully.`));
+        // Reinitialize skill registry
+        await this.skillRegistry!.initialize();
+        // Auto-inject the skill
+        const skill = await this.skillRegistry!.get(selected.name);
+        if (skill) {
+          this._pendingSkillInject = skill;
+          console.log(C.info(`  Skill "${selected.name}" will be injected into your next message.`));
+        }
+      } else {
+        console.log(C.warning('  Installation completed but no skills were installed.'));
+      }
+
+    } catch (err) {
+      console.log(C.error(`  Failed to fetch skills: ${(err as Error).message}`));
+      console.log(C.dim('  Check your internet connection and try again.'));
+    }
+  }
+
+  // ========================================================================
+  // /skills author select — Browse pre-downloaded skills from SkillsHub
+  // ========================================================================
+
+  private async handleSkillsAuthorCommand(): Promise<void> {
+    // Look for SkillsHub in several common locations
+    const searchPaths = [
+      path.join(process.cwd(), 'SkillsHub'),
+      path.join(process.cwd(), 'skillshub'),
+      path.join(process.cwd(), '.skillshub'),
+    ];
+
+    let skillsHubDir = searchPaths.find(p => fs.existsSync(p));
+    if (!skillsHubDir) {
+      console.log(C.warning('  SkillsHub folder not found in current directory.'));
+      console.log(C.muted('  Create a "SkillsHub" folder with skill zip files and try again.'));
+      console.log(C.dim('  Example: /skills author select'));
+      return;
+    }
+
+    // Find all zip files
+    const entries = fs.readdirSync(skillsHubDir).filter(f => f.endsWith('.zip'));
+    if (entries.length === 0) {
+      console.log(C.warning('  No zip files found in SkillsHub/'));
+      console.log(C.muted('  Add skill zip files to the SkillsHub folder.'));
+      return;
+    }
+
+    console.log('');
+    console.log(C.brand('  SkillsHub — Local Skill Library'));
+    console.log(C.dim('  ' + BOX.h.repeat(58)));
+    console.log(C.muted(`  Found ${entries.length} skill packages in ${path.basename(skillsHubDir)}/`));
+    console.log('');
+
+    // Parse each zip to get skill info
+    const skillEntries: Array<{ name: string; desc: string; zipPath: string }> = [];
+    
+    for (const entry of entries) {
+      const zipPath = path.join(skillsHubDir, entry);
+      // Try to extract name from filename
+      const nameFromZip = entry.replace(/-\d+\.zip$/, '').replace(/\.zip$/, '').replace(/-/g, ' ');
+      // Try to read zip contents for SKILL.md
+      let description = '';
+      try {
+        const { execSync } = await import('node:child_process');
+        const tmpDir = path.join(os.tmpdir(), `nova-skill-${Date.now()}`);
+        execSync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${tmpDir}' -Force"`, { stdio: 'pipe' });
+        // Look for SKILL.md in the extracted directory
+        const findSkillMd = (dir: string, depth = 0): string | null => {
+          if (depth > 3) return null;
+          const items = fs.readdirSync(dir, { withFileTypes: true });
+          for (const item of items) {
+            if (item.name === 'SKILL.md' && item.isFile()) {
+              return path.join(dir, item.name);
+            }
+            if (item.isDirectory() && !item.name.startsWith('.') && item.name !== 'node_modules') {
+              const found = findSkillMd(path.join(dir, item.name), depth + 1);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        const skillMdPath = findSkillMd(tmpDir);
+        if (skillMdPath) {
+          const content = fs.readFileSync(skillMdPath, 'utf-8');
+          const descMatch = content.match(/description:\s*(.+)/);
+          if (descMatch) description = descMatch[1].trim();
+        }
+        // Cleanup
+        try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+      } catch {
+        // If parsing fails, just use filename
+      }
+
+      skillEntries.push({
+        name: nameFromZip,
+        desc: description || 'No description available',
+        zipPath,
+      });
+    }
+
+    // Display interactive selection
+    const selected = await this.arrowKeySelect(
+      skillEntries.map(s => ({ name: s.name, desc: s.desc })),
+      'Select a local skill to install'
+    );
+
+    if (!selected) {
+      console.log(C.muted('  Cancelled.'));
+      return;
+    }
+
+    const entry = skillEntries.find(s => s.name === selected.name);
+    if (!entry) return;
+
+    console.log('');
+    console.log(C.muted(`  Installing "${selected.name}"...`));
+
+    // Install from zip
+    try {
+      const { SkillInstaller } = await import('../../../core/src/extensions/SkillInstaller.js');
+      const installer = new SkillInstaller();
+      const installed = await installer.installFromZip(entry.zipPath);
+      
+      if (installed.length > 0) {
+        console.log(C.success(`  ✓ Installed "${installed[0].name}" successfully.`));
+        await this.skillRegistry!.initialize();
+        const skill = await this.skillRegistry!.get(installed[0].name);
+        if (skill) {
+          this._pendingSkillInject = skill;
+          console.log(C.info(`  Skill "${installed[0].name}" will be injected into your next message.`));
+        }
+      } else {
+        console.log(C.warning('  No valid skill found in the zip file.'));
+      }
+    } catch (err) {
+      console.log(C.error(`  Installation failed: ${(err as Error).message}`));
+    }
+  }
+
+  // ========================================================================
+  // /skills user — Install skill from custom file/zip path
+  // ========================================================================
+
+  private async handleSkillsUserCommand(): Promise<void> {
+    console.log('');
+    console.log(C.brand('  Install Skill from File'));
+    console.log(C.dim('  ' + BOX.h.repeat(58)));
+    console.log(C.muted('  Enter the path to your skill file or zip package.'));
+    console.log(C.dim('  Supported: SKILL.md file, .zip archive containing SKILL.md'));
+    console.log('');
+
+    const skillPath = await this.promptInput('  Path: ');
+    if (!skillPath || !skillPath.trim()) {
+      console.log(C.muted('  Cancelled.'));
+      return;
+    }
+
+    const resolvedPath = path.resolve(skillPath.trim());
+    if (!fs.existsSync(resolvedPath)) {
+      console.log(C.error(`  File not found: ${resolvedPath}`));
+      return;
+    }
+
+    // Ask scope: Global (G) or Local session (L)
+    console.log('');
+    console.log(C.muted('  Install scope:'));
+    console.log(C.info('    G') + C.muted(' — Global (available in all sessions)'));
+    console.log(C.info('    L') + C.muted(' — Current session only'));
+    console.log('');
+
+    const scope = await this.promptInput('  Scope (G/L): ');
+    const isGlobal = scope?.trim().toLowerCase() === 'g';
+
+    console.log('');
+    console.log(C.muted(`  Installing skill from: ${resolvedPath}`));
+    console.log(C.muted(`  Scope: ${isGlobal ? 'Global (~/.nova/skills/)' : 'Session (memory only)'}`));
+
+    try {
+      const { SkillInstaller } = await import('../../../core/src/extensions/SkillInstaller.js');
+      const installer = new SkillInstaller();
+      
+      let installed;
+      if (resolvedPath.endsWith('.zip')) {
+        installed = await installer.installFromZip(resolvedPath, isGlobal ? undefined : undefined);
+      } else {
+        // Install from a single SKILL.md file or directory
+        installed = await installer.installFromFile(resolvedPath);
+      }
+
+      if (installed.length > 0) {
+        console.log(C.success(`  ✓ Installed "${installed[0].name}" successfully.`));
+        if (!isGlobal) {
+          // For session-only, just inject the skill content
+          const content = fs.readFileSync(path.join(installed[0].path, 'SKILL.md'), 'utf-8');
+          const { SkillValidator } = await import('../../../core/src/extensions/SkillValidator.js');
+          const validator = new SkillValidator();
+          const parsed = validator.parse(content);
+          this._pendingSkillInject = { metadata: parsed, content };
+          console.log(C.info(`  Skill "${installed[0].name}" will be injected into your next message.`));
+        } else {
+          await this.skillRegistry!.initialize();
+          const skill = await this.skillRegistry!.get(installed[0].name);
+          if (skill) {
+            this._pendingSkillInject = skill;
+            console.log(C.info(`  Skill "${installed[0].name}" will be injected into your next message.`));
+          }
+        }
+      } else {
+        console.log(C.warning('  No valid skill found. Make sure the file contains a SKILL.md.'));
+      }
+    } catch (err) {
+      console.log(C.error(`  Installation failed: ${(err as Error).message}`));
+    }
+  }
+
+  // ========================================================================
+  // Arrow Key Selection Helper
+  // ========================================================================
+
+  private async arrowKeySelect(
+    items: Array<{ name: string; desc: string }>,
+    title: string
+  ): Promise<{ name: string } | null> {
+    if (items.length === 0) return null;
+    if (items.length === 1) {
+      console.log(C.primary(`  ${items[0].name}`) + C.dim(` — ${items[0].desc}`));
+      const confirm = await this.promptInput('  Install this skill? (Y/n): ');
+      if (confirm && confirm.toLowerCase() === 'n') return null;
+      return items[0];
+    }
+
+    let cursor = 0;
+    
+    return new Promise((resolve) => {
+      const render = () => {
+        // Clear previous output (move cursor up)
+        const lines = items.length + 3;
+        process.stdout.write(`\x1b[${lines}A`);
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const isSelected = i === cursor;
+          const marker = isSelected ? C.success('  > ') : '    ';
+          const nameColor = isSelected ? C.success.bold : C.primary;
+          const descColor = isSelected ? C.muted : C.dim;
+          // Calculate padding
+          const namePad = 35;
+          const nameStr = item.name.length > namePad ? item.name.slice(0, namePad - 2) + '..' : item.name.padEnd(namePad);
+          console.log(`${marker}${nameColor(nameStr)} ${descColor(item.desc.slice(0, 40))}`);
+        }
+        console.log(C.dim('  ↑↓ navigate  Enter select  Esc cancel'));
+      };
+
+      // Initial render with enough blank lines
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const namePad = 35;
+        const nameStr = item.name.length > namePad ? item.name.slice(0, namePad - 2) + '..' : item.name.padEnd(namePad);
+        console.log(`    ${C.primary(nameStr)} ${C.dim(item.desc.slice(0, 40))}`);
+      }
+      console.log(C.dim('  ↑↓ navigate  Enter select  Esc cancel'));
+
+      // Set raw mode for arrow keys
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+
+        const onData = (key: Buffer) => {
+          const str = key.toString();
+          
+          if (str === '\x1b[A' || str === 'k') { // Up arrow or k
+            cursor = (cursor - 1 + items.length) % items.length;
+            render();
+          } else if (str === '\x1b[B' || str === 'j') { // Down arrow or j
+            cursor = (cursor + 1) % items.length;
+            render();
+          } else if (str === '\r' || str === '\n') { // Enter
+            cleanup();
+            resolve(items[cursor]);
+          } else if (str === '\x1b' || str === '\x03' || str === 'q') { // Esc or Ctrl+C
+            cleanup();
+            resolve(null);
+          }
+        };
+
+        const cleanup = () => {
+          process.stdin.setRawMode(false);
+          process.stdin.removeListener('data', onData);
+          process.stdin.pause();
+        };
+
+        process.stdin.on('data', onData);
+      } else {
+        // Non-interactive fallback: just pick first
+        resolve(items[0]);
+      }
+    });
+  }
+
+  // ========================================================================
+  // Prompt Input Helper
+  // ========================================================================
+
+  private promptInput(prompt: string): Promise<string> {
+    return new Promise((resolve) => {
+      this.rl?.question(prompt, (answer) => {
+        resolve(answer.trim());
+      });
+    });
   }
 
   // ========================================================================
@@ -2816,9 +3306,15 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
   private async handleApproval(request: ApprovalRequest): Promise<ApprovalResponse> {
     const effectiveMode = this.getEffectiveApprovalMode();
 
-    if (effectiveMode === 'yolo' || effectiveMode === 'accepting_edits') {
+    // Auto-approve in yolo mode
+    if (effectiveMode === 'yolo') {
       return { requestId: request.id, approved: true };
     }
+
+    // In accepting_edits mode, ToolRegistry already filtered file tools
+    // If we get here, it's a non-file tool that needs approval
+    // In smart mode, ToolRegistry already filtered low-risk tools
+    // For plan, default, and any tool that reaches here: show prompt
 
     this.stopSpinner();
 
@@ -2864,6 +3360,10 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
         return '[PLAN MODE] First analyze and create a step-by-step plan. Wait for confirmation before executing.';
       case 'ask':
         return '[ASK MODE] Only answer questions. Do NOT modify files or execute commands.';
+      case 'smart':
+        return '[SMART MODE] Intelligent approval: low-risk operations auto-approved, high-risk ones ask for confirmation.';
+      case 'edits':
+        return '[EDITS MODE] File read/write/edit auto-approved. Shell commands and other operations may ask for confirmation.';
       default:
         return '';
     }

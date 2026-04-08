@@ -56,7 +56,7 @@ export abstract class OpenAICompatibleProvider implements ModelProvider {
         const retryAfter = parseInt(err.headers?.['retry-after'] || '60', 10) * 1000;
         throw new RateLimitError(err.message, retryAfter, this.name);
       }
-      throw new ModelError(err.message, err.status, this.name, err);
+      throw new ModelError(this.enrichErrorMessage(err), err.status, this.name, err);
     }
     throw new ModelError(
       `${this.name} ${operation} failed: ${(err as Error).message}`,
@@ -69,7 +69,7 @@ export abstract class OpenAICompatibleProvider implements ModelProvider {
   /** Override to customize the error handling in stream() */
   protected handleStreamError(err: unknown): StreamEvent {
     if (err instanceof OpenAI.APIError) {
-      return { type: 'error', error: new ModelError(err.message, err.status, this.name, err) };
+      return { type: 'error', error: new ModelError(this.enrichErrorMessage(err), err.status, this.name, err) };
     }
     return {
       type: 'error',
@@ -91,6 +91,83 @@ export abstract class OpenAICompatibleProvider implements ModelProvider {
    */
   protected filterTools(tools: ToolDefinition[], modelId: string): ToolDefinition[] {
     return tools;
+  }
+
+  /**
+   * Enrich API error messages with actionable suggestions.
+   * Helps users diagnose common issues like unsupported models, auth problems, etc.
+   */
+  protected enrichErrorMessage(err: Error): string {
+    // Default values
+    let msg = err.message;
+    let status: number | undefined = undefined;
+    let errorCode = '';
+    let errorDetail = '';
+
+    // Check if this is an OpenAI APIError
+    if ('status' in err && 'message' in err) {
+      const apiError = err as { status?: number; message: string; error?: Record<string, unknown> };
+      msg = apiError.message;
+      status = apiError.status;
+
+      // Parse structured error from response body if available
+      try {
+        const body = apiError.error;
+        if (body?.error && typeof body.error === 'object') {
+          const errObj = body.error as Record<string, unknown>;
+          errorCode = String(errObj.code || '');
+          errorDetail = String(errObj.message || msg);
+        }
+      } catch { /* ignore parse failures */ }
+    }
+
+    // Unsupported model
+    if (errorCode === 'invalid_parameter' && errorDetail.toLowerCase().includes('unsupported model')) {
+      return `${errorDetail}\n\n  Suggestion: Check available models with 'nova model list' or verify the model ID.`;
+    }
+
+    // JSON format error from API gateway (often means unsupported model or endpoint issue)
+    if (msg === 'json format error' || errorCode === 'invalid_format') {
+      return `${msg}\n\n  This often means the model "${this.client.baseURL}" is not available on this provider.\n  Suggestion: Check available models with 'nova model list' or try a different model.`;
+    }
+
+    // Authentication errors
+    if (status === 401 || errorCode === 'invalid_api_key') {
+      return `${msg}\n\n  Suggestion: Run 'nova auth set <provider>' to update your API key.`;
+    }
+
+    // Context length exceeded
+    if (status === 400 && (msg.includes('context_length') || msg.includes('max_tokens') || msg.includes('token limit'))) {
+      return `${msg}\n\n  Suggestion: Use /compact to compress context, or start a new session.`;
+    }
+
+    // Timeout errors (various forms)
+    if (msg.includes('timeout') || msg.includes('aborted') || msg.includes('ETIMEDOUT') || msg.includes('ECONNRESET')) {
+      return `${msg}\n\n  Suggestion: This is likely a network timeout. Try:
+  1. Run 'nova model list' to check connection
+  2. Switch to a different model with '/model'
+  3. Check your internet connection
+  4. For long tasks, try a local model instead of cloud API`;
+    }
+
+    // Service unavailable / rate limit
+    if (status === 503 || status === 429 || msg.includes('service temporarily') || msg.includes('rate limit')) {
+      return `${msg}\n\n  Suggestion: Service is temporarily unavailable. Try:
+  1. Wait a moment and retry
+  2. Switch to a different model with '/model'
+  3. Check service status with 'nova model list'`;
+    }
+
+    // Network / connection errors
+    if (msg.includes('fetch failed') || msg.includes('network') || msg.includes('connection')) {
+      return `${msg}\n\n  Suggestion: Network connection issue. Check:
+  1. Internet connection
+  2. Firewall / proxy settings
+  3. Try 'nova model list' to verify connectivity`;
+    }
+
+    // Default: return original message
+    return msg;
   }
 
   // --- Shared implementations ---
@@ -174,6 +251,20 @@ export abstract class OpenAICompatibleProvider implements ModelProvider {
         stream: true,
       };
 
+      // Debug: log request details for troubleshooting (controlled by NOVA_DEBUG)
+      if (process.env.NOVA_DEBUG) {
+        process.stderr.write(`[DEBUG-STREAM] baseURL: ${this.client.baseURL}\n`);
+        process.stderr.write(`[DEBUG-STREAM] model: ${options.model}, maxTokens: ${options.maxTokens}, temperature: ${options.temperature}\n`);
+        process.stderr.write(`[DEBUG-STREAM] messages count: ${openaiMessages.length}, tools count: ${openaiTools.length}\n`);
+        // Log first message as sample
+        if (openaiMessages.length > 0) {
+          process.stderr.write(`[DEBUG-STREAM] first message: ${JSON.stringify(openaiMessages[0]).slice(0, 500)}\n`);
+        }
+        if (openaiTools.length > 0) {
+          process.stderr.write(`[DEBUG-STREAM] first tool: ${JSON.stringify(openaiTools[0]).slice(0, 500)}\n`);
+        }
+      }
+
       const stream = await this.client.chat.completions.create(params);
       let currentToolCallId = '';
       let currentToolName = '';
@@ -219,8 +310,8 @@ export abstract class OpenAICompatibleProvider implements ModelProvider {
           const hasFuncOpen = fullTextBuffer.includes('<function_calls>');
           const hasFuncClose = fullTextBuffer.includes('</function_calls>');
           
-          // Debug
-          process.stdout.write(`\n[PROVIDER-DEBUG] finish_reason="${chunk.choices[0].finish_reason}", standardCalls=${standardToolCallIds.size}, textLen=${fullTextBuffer.length}, hasOpen=${hasFuncOpen}, hasClose=${hasFuncClose}, textPreview="${fullTextBuffer.slice(-200)}"\n`);
+          // Debug - Commented out to reduce visual clutter
+          // process.stdout.write(`\n[PROVIDER-DEBUG] finish_reason="${chunk.choices[0].finish_reason}", standardCalls=${standardToolCallIds.size}, textLen=${fullTextBuffer.length}, hasOpen=${hasFuncOpen}, hasClose=${hasFuncClose}, textPreview="${fullTextBuffer.slice(-200)}"\n`);
 
           if (hasFuncOpen && hasFuncClose) {
             const callsBlock = fullTextBuffer.substring(
