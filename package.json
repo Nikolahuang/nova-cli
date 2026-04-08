@@ -1,6 +1,6 @@
 {
   "name": "@nikolahuang1/nova",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Next-generation CLI agent framework - efficient, multimodal, intelligent",
   "engines": {
     "bun": ">=1.0.0",
