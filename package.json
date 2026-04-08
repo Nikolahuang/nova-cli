@@ -1,13 +1,13 @@
 {
   "name": "@nikolahuang1/nova",
-  "version": "0.2.1",
+  "version": "0.2.6",
   "description": "Next-generation CLI agent framework - efficient, multimodal, intelligent",
   "engines": {
     "bun": ">=1.0.0",
     "node": ">=18.0.0"
   },
   "bin": {
-    "nova": "./nova"
+    "nova": "./packages/cli/bin/nova"
   },
   "scripts": {
     "build": "turbo run build",
@@ -26,7 +26,6 @@
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.2.0",
     "rimraf": "^5.0.0",
-    "tsx": "^4.21.0",
     "turbo": "^2.8.21",
     "typescript": "^5.9.3",
     "vitest": "^1.4.0"
@@ -39,6 +38,7 @@
     "mammoth": "^1.12.0",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.4",
+    "tsx": "^4.21.0",
     "xlsx": "^0.18.5"
   }
 }
