@@ -1,5 +1,5 @@
 {
-  "name": "nova-cli",
+  "name": "@nikolahuang1/nova",
   "version": "0.2.1",
   "description": "Next-generation CLI agent framework - efficient, multimodal, intelligent",
   "engines": {
