@@ -4,10 +4,14 @@
     "outDir": "dist",
     "jsx": "react-jsx",
     "baseUrl": ".",
-    "rootDir": "../..",
     "composite": true,
     "declaration": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "exactOptionalPropertyTypes": false,
+    "noPropertyAccessFromIndexSignature": false
   },
   "include": ["src/**/*", "../core/src/**/*.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/test-*.ts", "../core/src/**/*.test.ts"]

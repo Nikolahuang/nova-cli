@@ -1,5 +1,5 @@
 {
-  "name": "@nikolahuang1/nova",
+  "name": "iflow4nova",
   "version": "0.2.7",
   "description": "Next-generation CLI agent framework - efficient, multimodal, intelligent",
   "engines": {

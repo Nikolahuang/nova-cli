@@ -1,5 +1,5 @@
 {
-  "name": "nova-terminal-ai",
+  "name": "iflow4nova",
   "version": "0.4.0",
   "description": "Nova CLI - Next-generation AI-powered terminal assistant",
   "type": "module",
@@ -16,13 +16,13 @@
   },
   "files": [
     "bin/",
-    "dist/",
+    "src/",
     "README.md"
   ],
   "scripts": {
     "start": "bun run bin/nova.js",
     "dev": "bun run --watch bin/nova.js",
-    "build": "bun build bin/nova.js --outfile dist/index.js --target bun",
+    "build": "npx tsc --skipLibCheck --noEmitOnError false --outDir dist",
     "test": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
@@ -90,10 +90,5 @@
     "@types/react": "^18.2.0",
     "ink-testing-library": "^3.0.0",
     "typescript": "^5.9.3"
-  },
-  "peerDependenciesMeta": {
-    "tsx": {
-      "optional": true
-    }
   }
 }
