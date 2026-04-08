@@ -3,7 +3,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import type { SessionInfo, NovaConfig } from '../../../core/src/types/config.js';
+import type { SessionInfo, NovaConfig } from '../../../packages/core/src/types/config.js';
 
 import { StatusBar } from './components/StatusBar.js';
 import { ProgressIndicator } from './components/ProgressIndicator.js';
@@ -121,22 +121,22 @@ export class ModernReplUI {
     const border = '‚îÄ'.repeat(width);
 
     console.log('');
-    console.log(chalk.blue('‚îå' + border + '‚îê'));
-    console.log(chalk.blue('‚îÇ') + ' '.repeat(width) + chalk.blue('‚îÇ'));
-    console.log(chalk.blue('‚îÇ') + chalk.white(` ${prompt}`).padEnd(width - 2) + chalk.blue('‚îÇ'));
-    console.log(chalk.blue('‚îÇ') + ' '.repeat(width) + chalk.blue('‚îÇ'));
-    console.log(chalk.blue('‚îî' + border + '‚îò'));
+    console.log(chalk.blue('‚î? + border + '‚î?));
+    console.log(chalk.blue('‚î?) + ' '.repeat(width) + chalk.blue('‚î?));
+    console.log(chalk.blue('‚î?) + chalk.white(` ${prompt}`).padEnd(width - 2) + chalk.blue('‚î?));
+    console.log(chalk.blue('‚î?) + ' '.repeat(width) + chalk.blue('‚î?));
+    console.log(chalk.blue('‚î? + border + '‚î?));
   }
 
   clearInputBox(): void {
     if (!this.options.showInputBox) return;
 
     const width = Math.min(process.stdout.columns || 80, 100);
-    console.log(chalk.blue('‚îå' + ' '.repeat(width) + '‚îê'));
-    console.log(chalk.blue('‚îÇ') + ' '.repeat(width) + chalk.blue('‚îÇ'));
-    console.log(chalk.blue('‚îÇ') + ' '.repeat(width) + chalk.blue('‚îÇ'));
-    console.log(chalk.blue('‚îÇ') + ' '.repeat(width) + chalk.blue('‚îÇ'));
-    console.log(chalk.blue('‚îî' + ' '.repeat(width) + '‚îò'));
+    console.log(chalk.blue('‚î? + ' '.repeat(width) + '‚î?));
+    console.log(chalk.blue('‚î?) + ' '.repeat(width) + chalk.blue('‚î?));
+    console.log(chalk.blue('‚î?) + ' '.repeat(width) + chalk.blue('‚î?));
+    console.log(chalk.blue('‚î?) + ' '.repeat(width) + chalk.blue('‚î?));
+    console.log(chalk.blue('‚î? + ' '.repeat(width) + '‚î?));
   }
 
   // Utility methods
@@ -150,18 +150,18 @@ export class ModernReplUI {
     const messages = [
       chalk.cyan('üöÄ Welcome to Nova CLI - Your AI-Powered Terminal Assistant'),
       '',
-      chalk.yellow('‚ú® Features:'),
-      '  ‚Ä¢ Multiple AI model providers (OpenAI, Anthropic, Ollama, etc.)',
-      '  ‚Ä¢ Smart file operations with @file references',
-      '  ‚Ä¢ Built-in tools for code analysis and generation',
-      '  ‚Ä¢ MCP server integration for extended functionality',
-      '  ‚Ä¢ Session persistence and history management',
+      chalk.yellow('‚ú?Features:'),
+      '  ‚Ä?Multiple AI model providers (OpenAI, Anthropic, Ollama, etc.)',
+      '  ‚Ä?Smart file operations with @file references',
+      '  ‚Ä?Built-in tools for code analysis and generation',
+      '  ‚Ä?MCP server integration for extended functionality',
+      '  ‚Ä?Session persistence and history management',
       '',
       chalk.blue('üìñ Quick Start:'),
-      '  ‚Ä¢ Type your request and press Enter',
-      '  ‚Ä¢ Use @filename to reference files',
-      '  ‚Ä¢ Use !command to execute shell commands',
-      '  ‚Ä¢ Press /help for command reference',
+      '  ‚Ä?Type your request and press Enter',
+      '  ‚Ä?Use @filename to reference files',
+      '  ‚Ä?Use !command to execute shell commands',
+      '  ‚Ä?Press /help for command reference',
       '',
       chalk.gray('Press Ctrl+C at any time to cancel current operation')
     ];

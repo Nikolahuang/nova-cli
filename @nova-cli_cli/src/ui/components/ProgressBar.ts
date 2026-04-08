@@ -89,7 +89,7 @@ export class ProgressBar {
     const emptyWidth = width - filledWidth;
     
     const colorFn = chalk.hex(color);
-    const bar = colorFn('‚îÅ'.repeat(filledWidth)) + chalk.dim('‚îÄ'.repeat(emptyWidth));
+    const bar = colorFn('‚î?.repeat(filledWidth)) + chalk.dim('‚îÄ'.repeat(emptyWidth));
     
     let output = '\r';
     
@@ -97,7 +97,7 @@ export class ProgressBar {
       output += chalk.cyan(label) + ' ';
     }
     
-    output += '‚ï≠' + bar + '‚ïÆ';
+    output += '‚ï? + bar + '‚ï?;
     
     if (showPercentage) {
       output += ' ' + chalk.bold(percentage.toFixed(1) + '%');

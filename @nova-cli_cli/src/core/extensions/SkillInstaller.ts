@@ -84,14 +84,14 @@ export class SkillInstaller {
 
         // Check if exists
         if (fs.existsSync(destPath) && !force) {
-          console.log(`  âš  ${skillName} already exists, use --force to overwrite`);
+          console.log(`  âš?${skillName} already exists, use --force to overwrite`);
           continue;
         }
 
         // Copy skill
         this.copySkill(srcPath, destPath);
         installed.push({ name: skillName, path: destPath, source: repoUrl });
-        console.log(`  âœ“ Installed: ${skillName}`);
+        console.log(`  âœ?Installed: ${skillName}`);
       }
 
       return installed;

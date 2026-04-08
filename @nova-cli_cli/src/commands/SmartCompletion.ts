@@ -3,7 +3,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import type { SessionInfo } from '../../../core/src/types/config.js';
+import type { SessionInfo } from '../../../packages/core/src/types/config.js';
 
 export interface CommandSuggestion {
   text: string;
@@ -91,7 +91,7 @@ export class SmartCompletion {
       // Show suggestions
       sortedSuggestions.forEach((suggestion, index) => {
         const isSelected = index === selectedIndex;
-        const prefix = isSelected ? chalk.green('‚ñ∂ ') : chalk.gray('  ');
+        const prefix = isSelected ? chalk.green('‚ñ?') : chalk.gray('  ');
         const keyDisplay = isSelected ? chalk.cyan(`[${suggestion.text}]`) : chalk.gray(suggestion.text);
         const descDisplay = chalk.white(suggestion.description);
 
@@ -99,9 +99,9 @@ export class SmartCompletion {
       });
 
       // Bottom border
-      console.log(chalk.blue('‚îå' + border + '‚îê'));
-      console.log(chalk.blue('‚îÇ') + ' '.repeat(width) + chalk.blue('‚îÇ'));
-      console.log(chalk.blue('‚îî' + border + '‚îò'));
+      console.log(chalk.blue('‚î? + border + '‚î?));
+      console.log(chalk.blue('‚î?) + ' '.repeat(width) + chalk.blue('‚î?));
+      console.log(chalk.blue('‚î? + border + '‚î?));
     };
 
     // Initial render
@@ -126,7 +126,7 @@ export class SmartCompletion {
           case '\n':
             rl.close();
             const selected = sortedSuggestions[selectedIndex];
-            console.log(`\n‚úì Selected: ${chalk.cyan(selected.text)}`);
+            console.log(`\n‚ú?Selected: ${chalk.cyan(selected.text)}`);
             this.executeCommand(selected.text);
             resolve();
             break;
@@ -159,7 +159,7 @@ export class SmartCompletion {
     
     // Simulate command execution
     setTimeout(() => {
-      console.log(chalk.green(`‚úì Command executed: ${commandText}`));
+      console.log(chalk.green(`‚ú?Command executed: ${commandText}`));
       
       // Add to recent commands
       this.addRecentCommand(commandText);
@@ -271,14 +271,14 @@ export class SmartCompletion {
     this.addCommand('quit', {
       description: 'Exit Nova CLI (session auto-saved)',
       category: 'navigation',
-      icon: '‚úó',
+      icon: '‚ú?,
       shortcut: '/exit'
     });
 
     this.addCommand('clear', {
       description: 'Clear conversation and start new session',
       category: 'session',
-      icon: 'üóëÔ∏è',
+      icon: 'üóëÔ∏?,
       shortcut: '/reset'
     });
 
@@ -298,7 +298,7 @@ export class SmartCompletion {
     this.addCommand('compress', {
       description: 'Optimize context window size',
       category: 'session',
-      icon: '‚ö°'
+      icon: '‚ö?
     });
 
     // Model commands
@@ -336,14 +336,14 @@ export class SmartCompletion {
     this.addCommand('ask', {
       description: 'Switch to ASK mode (read-only questions)',
       category: 'session',
-      icon: '‚ùì'
+      icon: '‚ù?
     });
 
     // Tool commands
     this.addCommand('tools', {
       description: 'Manage built-in tools and capabilities',
       category: 'tools',
-      icon: 'üõ†Ô∏è'
+      icon: 'üõ†Ô∏?
     });
 
     this.addCommand('skills', {
@@ -387,7 +387,7 @@ export class SmartCompletion {
     this.addCommand('memory-add', {
       description: 'Add a new memory note',
       category: 'session',
-      icon: '‚ûï'
+      icon: '‚û?
     });
 
     // Quick actions

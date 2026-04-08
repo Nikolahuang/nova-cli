@@ -57,11 +57,11 @@ const C = {
 // ============================================================================
 
 const BOX = {
-  h: '─', v: '│',
-  tl: '╭', tr: '╮', bl: '╰', br: '╯',
-  ht: '├', htr: '┤',
-  check: '✓', cross: '✗', dot: '·',
-  arrow: '→', spinner: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
+  h: '─', v: '�?,
+  tl: '�?, tr: '�?, bl: '�?, br: '�?,
+  ht: '�?, htr: '�?,
+  check: '�?, cross: '�?, dot: '·',
+  arrow: '�?, spinner: ['�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?],
 };
 
 // ============================================================================
@@ -180,7 +180,7 @@ export class ToolCallStatusDisplay {
     // Show compact tool start
     process.stdout.write(
       '\n' +
-      C.cyan('  ⚡ ') +
+      C.cyan('  �?') +
       C.primary(info.name) +
       C.dim(` #${idx.toString().padStart(2, '0')}`) +
       inputPreview +

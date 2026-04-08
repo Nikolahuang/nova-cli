@@ -24,9 +24,9 @@ function getTodos(sessionId: string): TodoItem[] {
 function renderTodos(todos: TodoItem[]): string {
   if (todos.length === 0) return 'No tasks tracked.';
   const statusIcons: Record<string, string> = {
-    pending: 'â—‹',
-    in_progress: 'â—‰',
-    completed: 'â—',
+    pending: 'â—?,
+    in_progress: 'â—?,
+    completed: 'â—?,
   };
   return todos.map((t) => `${statusIcons[t.status]} [${t.status.padEnd(12)}] ${t.content}`).join('\n');
 }

@@ -25,7 +25,7 @@ export const fileProcessorSchema = z.object({
     
     filePath: z.string().describe('文件路径'),
     
-    content: z.string().optional().describe('写入的内容'),
+    content: z.string().optional().describe('写入的内�?),
     
     encoding: z.string().optional().default('utf8').describe('文件编码'),
     
@@ -36,7 +36,7 @@ export const fileProcessorSchema = z.object({
         pdf: z.object({
             startPage: z.number().optional().describe('起始页码'),
             endPage: z.number().optional().describe('结束页码'),
-            includeMetadata: z.boolean().optional().describe('是否包含元数据')
+            includeMetadata: z.boolean().optional().describe('是否包含元数�?)
         }).optional(),
         
         // Word选项
@@ -47,8 +47,8 @@ export const fileProcessorSchema = z.object({
         
         // Excel选项
         excel: z.object({
-            sheetName: z.string().optional().describe('工作表名称'),
-            headerRow: z.number().optional().describe('标题行'),
+            sheetName: z.string().optional().describe('工作表名�?),
+            headerRow: z.number().optional().describe('标题�?),
             includeFormulas: z.boolean().optional().describe('是否包含公式')
         }).optional(),
         
@@ -56,7 +56,7 @@ export const fileProcessorSchema = z.object({
         pretty: z.boolean().optional().describe('是否格式化JSON'),
         
         // Excel创建选项
-        sheetName: z.string().optional().describe('Excel工作表名称'),
+        sheetName: z.string().optional().describe('Excel工作表名�?),
         
         // 通用选项
         data: z.any().optional().describe('要写入的数据')
@@ -67,7 +67,7 @@ export type FileProcessorInput = z.infer<typeof fileProcessorSchema>;
 
 export const fileProcessorToolDefinition = {
     name: 'file_processor',
-    description: '统一文件处理工具，支持PDF、Word、Excel、JSON、XML、Markdown等格式',
+    description: '统一文件处理工具，支持PDF、Word、Excel、JSON、XML、Markdown等格�?,
     category: 'file',
     inputSchema: fileProcessorSchema,
     requiresApproval: false,

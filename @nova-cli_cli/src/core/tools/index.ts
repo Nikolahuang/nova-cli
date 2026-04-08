@@ -1,12 +1,12 @@
 // ============================================================================
-// Tools Index - 导出所有工具
+// Tools Index - 导出所有工�?
 // ============================================================================
 
 export { FileProcessorTool, fileProcessorTool } from './impl/FileProcessorTool.js';
 export { fileProcessor, FileProcessor } from './impl/FileProcessor.js';
 export { fileProcessorSchema, fileProcessorToolDefinition } from './schemas/fileProcessorSchema.js';
 
-// 其他工具处理器导出
+// 其他工具处理器导�?
 export { readFileHandler } from './impl/ReadFileTool.js';
 export { writeFileHandler } from './impl/WriteFileTool.js';
 export { editFileHandler } from './impl/EditFileTool.js';

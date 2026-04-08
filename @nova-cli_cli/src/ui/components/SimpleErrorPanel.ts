@@ -127,20 +127,20 @@ export class SimpleErrorPanel {
       console.log('\x1b[36mQuick commands:\x1b[0m');
       switch (errorInfo.category) {
         case 'auth':
-          console.log('\x1b[36m  ‚Ä¢ nova auth set <provider>\x1b[0m');
-          console.log('\x1b[36m  ‚Ä¢ Check environment variables\x1b[0m');
+          console.log('\x1b[36m  ‚Ä?nova auth set <provider>\x1b[0m');
+          console.log('\x1b[36m  ‚Ä?Check environment variables\x1b[0m');
           break;
         case 'config':
-          console.log('\x1b[36m  ‚Ä¢ nova config edit\x1b[0m');
-          console.log('\x1b[36m  ‚Ä¢ Check ~/.nova/config.yaml\x1b[0m');
+          console.log('\x1b[36m  ‚Ä?nova config edit\x1b[0m');
+          console.log('\x1b[36m  ‚Ä?Check ~/.nova/config.yaml\x1b[0m');
           break;
         case 'network':
-          console.log('\x1b[36m  ‚Ä¢ Check internet connection\x1b[0m');
-          console.log('\x1b[36m  ‚Ä¢ Try nova ollama status\x1b[0m');
+          console.log('\x1b[36m  ‚Ä?Check internet connection\x1b[0m');
+          console.log('\x1b[36m  ‚Ä?Try nova ollama status\x1b[0m');
           break;
         case 'model':
-          console.log('\x1b[36m  ‚Ä¢ nova model list\x1b[0m');
-          console.log('\x1b[36m  ‚Ä¢ Check provider configuration\x1b[0m');
+          console.log('\x1b[36m  ‚Ä?nova model list\x1b[0m');
+          console.log('\x1b[36m  ‚Ä?Check provider configuration\x1b[0m');
           break;
       }
     }
@@ -167,12 +167,12 @@ export class SimpleErrorPanel {
       network: 'üåê',
       model: 'ü§ñ',
       file: 'üìÅ',
-      execution: '‚ö°',
+      execution: '‚ö?,
       validation: '‚ö†Ô∏è',
       permission: 'üö´',
-      timeout: '‚è∞',
+      timeout: '‚è?,
       quota: 'üí∞',
-      unknown: '‚ùå'
+      unknown: '‚ù?
     };
 
     return icons[category] || icons.unknown;

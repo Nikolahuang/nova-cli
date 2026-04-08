@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EnhancedCompleter } from './EnhancedCompleter.js';
-import type { ConfigManager } from '../../../core/src/config/ConfigManager.js';
+import type { ConfigManager } from '../../../packages/core/src/config/ConfigManager.js';
 
 // Mock ConfigManager
 function createMockConfigManager(): ConfigManager {

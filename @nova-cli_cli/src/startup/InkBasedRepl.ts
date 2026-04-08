@@ -10,18 +10,18 @@ import { spawn, execSync } from 'node:child_process';
 import chalk from 'chalk';
 import React from 'react';
 import { render } from 'ink';
-import type { NovaConfig } from '../../../core/src/types/config.js';
-import type { SessionId, ApprovalRequest, ApprovalResponse } from '../../../core/src/types/session.js';
-import type { McpManager, McpServerStatus } from '../../../core/src/mcp/McpManager.js';
-import type { SkillRegistry, SkillDefinition } from '../../../core/src/extensions/SkillRegistry.js';
-import type { ConfigManager } from '../../../core/src/config/ConfigManager.js';
-import type { AuthManager } from '../../../core/src/auth/AuthManager.js';
-import { AgentLoop } from '../../../core/src/session/AgentLoop.js';
-import { ModelClient } from '../../../core/src/model/ModelClient.js';
-import { SessionManager } from '../../../core/src/session/SessionManager.js';
-import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.js';
-import { ApprovalManager } from '../../../core/src/security/ApprovalManager.js';
-import { buildSystemPrompt } from '../../../core/src/context/defaultSystemPrompt.js';
+import type { NovaConfig } from '../../../packages/core/src/types/config.js';
+import type { SessionId, ApprovalRequest, ApprovalResponse } from '../../../packages/core/src/types/session.js';
+import type { McpManager, McpServerStatus } from '../../../packages/core/src/mcp/McpManager.js';
+import type { SkillRegistry, SkillDefinition } from '../../../packages/core/src/extensions/SkillRegistry.js';
+import type { ConfigManager } from '../../../packages/core/src/config/ConfigManager.js';
+import type { AuthManager } from '../../../packages/core/src/auth/AuthManager.js';
+import { AgentLoop } from '../../../packages/core/src/session/AgentLoop.js';
+import { ModelClient } from '../../../packages/core/src/model/ModelClient.js';
+import { SessionManager } from '../../../packages/core/src/session/SessionManager.js';
+import { ToolRegistry } from '../../../packages/core/src/tools/ToolRegistry.js';
+import { ApprovalManager } from '../../../packages/core/src/security/ApprovalManager.js';
+import { buildSystemPrompt } from '../../../packages/core/src/context/defaultSystemPrompt.js';
 import { ThinkingBlockRenderer } from '../ui/components/ThinkingBlockRenderer.js';
 import { TodoProgressPanel, type TodoItem } from '../ui/components/TodoProgressPanel.js';
 import { UserMessageHighlight } from '../ui/components/UserMessageHighlight.js';
@@ -115,11 +115,11 @@ interface AppState {
 
 const BOX = {
   tl: '╭', tr: '╮', bl: '╰', br: '╯',
-  h: '─', v: '│', ht: '├', htr: '┤',
-  hThick: '━', vThick: '┃',
-  arrow: '›', bullet: '•', check: '✓', crossX: '✗', dot: '·',
+  h: '─', v: '│', ht: '┬', htr: '┐',
+  hThick: '═', vThick: '║',
+  arrow: '►', bullet: '●', check: '✓', crossX: '✗', dot: '·',
   diamond: '◆', star: '★',
-  spinner: ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'],
+  spinner: ['◐','◓','◑','◒','◐','◓','◑','◒','◐','◓'],
 };
 
 const MODE_LABELS = {
@@ -378,7 +378,7 @@ export class InkBasedRepl {
     const ctxStr = this.state.contextUsage > 0 ? 
       chalk.dim(` (${this.state.contextUsage}% ctx)`) : '';
     
-    process.stdout.write(`\n${modeBadge} ${chalk.gray(modelShort)}${ctxStr} ${chalk.hex('#7C3AED')('›')} `);
+    process.stdout.write(`\n${modeBadge} ${chalk.gray(modelShort)}${ctxStr} ${chalk.hex('#7C3AED')('►')} `);
   }
 
   // ========================================================================
@@ -433,7 +433,7 @@ export class InkBasedRepl {
 
       if (!input.trim()) continue;
 
-      // Set guard before dispatching — commands may enter/leave raw mode
+      // Set guard before dispatching - commands may enter/leave raw mode
       closeGuard = true;
       this.processing = true;
       await this.dispatchInput(input.trim());
@@ -549,7 +549,7 @@ export class InkBasedRepl {
     console.log(chalk.gray('  /init            Analyze project and initialize context'));
     console.log(chalk.gray('  /quit, /q        Exit Nova CLI'));
     console.log(chalk.gray('  /clear           Clear conversation'));
-    console.log(chalk.gray('  /mode            Cycle mode (AUTO → PLAN → ASK)'));
+    console.log(chalk.gray('  /mode            Cycle mode (AUTO ► PLAN ► ASK)'));
     console.log(chalk.gray('  /model           Switch model'));
     console.log(chalk.gray('  /ollama          Ollama status'));
     console.log(chalk.gray('  /status          Session status'));
@@ -564,7 +564,7 @@ export class InkBasedRepl {
 
   private async handleModelCommand(arg: string): Promise<void> {
     if (!arg) {
-      // Interactive model selection — only show configured providers
+      // Interactive model selection �?only show configured providers
       const config = this.configManager.getConfig();
       const models: Array<{provider: string, model: string, description?: string}> = [];
 
@@ -615,7 +615,7 @@ export class InkBasedRepl {
       if (selectedModel && selectedModel !== 'separator' && !selectedModel.startsWith('provider:')) {
         const success = await this.switchModel(selectedModel);
         if (success) {
-          console.log(chalk.green(`  ✓ Switched to: ${selectedModel}`));
+          console.log(chalk.green(`  �?Switched to: ${selectedModel}`));
         }
         // If failed, switchModel already printed an error message
       } else if (selectedModel && selectedModel.startsWith('provider:')) {
@@ -627,7 +627,7 @@ export class InkBasedRepl {
       // Direct model switch
       const success = await this.switchModel(arg);
       if (success) {
-        console.log(chalk.green(`  ✓ Switched to: ${arg}`));
+        console.log(chalk.green(`  �?Switched to: ${arg}`));
       }
     }
   }
@@ -676,7 +676,7 @@ export class InkBasedRepl {
         providerName = modelId.substring(0, idx);
         actualModelId = modelId.substring(idx + 1);
       } else {
-        // Bare model name — look up in config to find provider
+        // Bare model name �?look up in config to find provider
         const modelConfig = this.configManager.getModelConfig(modelId);
         if (!modelConfig) {
           // Might be an Ollama model
@@ -684,7 +684,7 @@ export class InkBasedRepl {
             providerName = 'ollama';
             actualModelId = modelId;
           } else {
-            console.log(chalk.red(`  ✗ Model "${modelId}" not found in config`));
+            console.log(chalk.red(`  �?Model "${modelId}" not found in config`));
             return false;
           }
         } else {
@@ -697,7 +697,7 @@ export class InkBasedRepl {
           }
           actualModelId = modelId;
           if (!providerName) {
-            console.log(chalk.red(`  ✗ Cannot determine provider for "${modelId}"`));
+            console.log(chalk.red(`  �?Cannot determine provider for "${modelId}"`));
             return false;
           }
         }
@@ -707,7 +707,7 @@ export class InkBasedRepl {
       const config = this.configManager.getConfig();
       const providerConfig = config.models.providers[providerName];
       if (!providerConfig) {
-        console.log(chalk.red(`  ✗ Unknown provider: "${providerName}"`));
+        console.log(chalk.red(`  �?Unknown provider: "${providerName}"`));
         return false;
       }
 
@@ -717,7 +717,7 @@ export class InkBasedRepl {
       // For non-Ollama providers, require API key
       const isOllamaType = providerType === 'ollama' || providerName === 'ollama' || providerName === 'ollama-cloud';
       if (!isOllamaType && !creds?.apiKey) {
-        console.log(chalk.yellow(`  ⚠ No API key found for "${providerName}"`));
+        console.log(chalk.yellow(`  �?No API key found for "${providerName}"`));
         console.log(chalk.gray(`  Set it with: nova auth set ${providerName}`));
         return false;
       }
@@ -743,7 +743,7 @@ export class InkBasedRepl {
 
       return true;
     } catch (err) {
-      console.log(chalk.red(`  ✗ Error switching model: ${(err as Error).message}`));
+      console.log(chalk.red(`  �?Error switching model: ${(err as Error).message}`));
       return false;
     }
   }
@@ -772,7 +772,7 @@ export class InkBasedRepl {
 
     console.log(chalk.hex('#7C3AED')('\n  MCP Servers:'));
     for (const s of statuses) {
-      const icon = s.connected ? chalk.green('✓') : chalk.red('✗');
+      const icon = s.connected ? chalk.green('●') : chalk.red('●');
       console.log(chalk.gray(`  ${icon} ${s.name}: ${s.connected ? 'connected' : 'disconnected'}`));
     }
     console.log('');
@@ -863,7 +863,7 @@ export class InkBasedRepl {
           console.log(chalk.hex('#7C3AED').bold('  Global Skills:'));
           console.log('');
           skills.forEach(skill => {
-            console.log(chalk.white(`  • ${skill.metadata.name}`));
+            console.log(chalk.white(`  •${skill.metadata.name}`));
             console.log(chalk.dim(`    ${skill.metadata.description}`));
             console.log('');
           });
@@ -874,7 +874,7 @@ export class InkBasedRepl {
           console.log(chalk.hex('#7C3AED').bold('  Local Skills (Current Session):'));
           console.log('');
           localSkills.forEach(skill => {
-            console.log(chalk.white(`  • ${skill.name}`));
+            console.log(chalk.white(`  •${skill.name}`));
             console.log(chalk.dim(`    ${skill.description}`));
             console.log('');
           });
@@ -917,7 +917,7 @@ export class InkBasedRepl {
         const selectedSkill = await selectSkillInteractive(skillItems);
 
         if (selectedSkill) {
-          console.log(chalk.green(`  ✓ Selected skill: ${selectedSkill}`));
+          console.log(chalk.green(`  ✓Selected skill: ${selectedSkill}`));
           console.log(chalk.dim('  Note: Skill injection not yet implemented in interactive mode'));
         } else {
           console.log(chalk.dim('  Skill selection cancelled'));
@@ -927,7 +927,7 @@ export class InkBasedRepl {
       }
     } else {
       // Specific skill requested
-      console.log(chalk.green(`  ✓ Selected skill: ${arg}`));
+      console.log(chalk.green(`  ✓Selected skill: ${arg}`));
       console.log(chalk.dim('  Note: Skill injection not yet implemented in interactive mode'));
     }
   }
@@ -1010,7 +1010,7 @@ export class InkBasedRepl {
           },
           content: skill.content,
         });
-        console.log(chalk.green(`  ✓ Skill "${skill.name}" added to global configuration`));
+        console.log(chalk.green(`  ✓Skill "${skill.name}" added to global configuration`));
       } catch (error) {
         console.log(chalk.red(`  Error registering skill: ${(error as Error).message}`));
         return;
@@ -1021,7 +1021,7 @@ export class InkBasedRepl {
         this.state.activeSkills = [];
       }
       this.state.activeSkills.push(skill);
-      console.log(chalk.green(`  ✓ Skill "${skill.name}" added to current session`));
+      console.log(chalk.green(`  ✓Skill "${skill.name}" added to current session`));
     }
 
     console.log('');
@@ -1045,7 +1045,7 @@ export class InkBasedRepl {
         console.log(chalk.white(`  Name: ${removed.name}`));
         console.log(chalk.white(`  Description: ${removed.description}`));
         console.log('');
-        console.log(chalk.green(`  ✓ Skill "${removed.name}" removed from current session`));
+        console.log(chalk.green(`  ✓Skill "${removed.name}" removed from current session`));
         console.log('');
         return;
       }
@@ -1066,9 +1066,9 @@ export class InkBasedRepl {
         const success = await this.skillRegistry!.remove(globalSkill.metadata.name);
 
         if (success) {
-          console.log(chalk.green(`  ✓ Skill "${globalSkill.metadata.name}" removed from global configuration`));
+          console.log(chalk.green(`  ✓Skill "${globalSkill.metadata.name}" removed from global configuration`));
         } else {
-          console.log(chalk.red(`  ✗ Failed to remove skill "${globalSkill.metadata.name}"`));
+          console.log(chalk.red(`  ✗Failed to remove skill "${globalSkill.metadata.name}"`));
         }
         console.log('');
         return;
@@ -1131,7 +1131,7 @@ export class InkBasedRepl {
   // ========================================================================
 
   private async handleProjectCommand(arg: string): Promise<void> {
-    const { ProjectAnalyzer } = await import('../../../core/src/analysis/ProjectAnalyzer.js');
+    const { ProjectAnalyzer } = await import('../../../packages/core/src/analysis/ProjectAnalyzer.js');
 
     // Parse command arguments
     const args = arg.trim().split(/\s+/);
@@ -1155,7 +1155,7 @@ export class InkBasedRepl {
    * Analyze current project and generate documentation
    */
   private async handleProjectAnalyze(): Promise<void> {
-    const { ProjectAnalyzer } = await import('../../../core/src/analysis/ProjectAnalyzer.js');
+    const { ProjectAnalyzer } = await import('../../../packages/core/src/analysis/ProjectAnalyzer.js');
 
     console.log('');
     console.log(chalk.hex('#7C3AED').bold('  Analyzing Project...'));
@@ -1171,7 +1171,7 @@ export class InkBasedRepl {
 
       const structure = await analyzer.analyze();
 
-      console.log(chalk.green('  ✓ Analysis complete'));
+      console.log(chalk.green('  ✓Analysis complete'));
       console.log('');
 
       // Generate markdown documentation
@@ -1213,7 +1213,7 @@ export class InkBasedRepl {
       });
 
       console.log('');
-      console.log(chalk.green(`  ✓ Full documentation saved to: ${docPath}`));
+      console.log(chalk.green(`  ✓Full documentation saved to: ${docPath}`));
       console.log('');
       console.log(chalk.dim('  The analysis will be used to help the AI understand your project structure.'));
       console.log('');
@@ -1222,7 +1222,7 @@ export class InkBasedRepl {
       this.state.projectAnalysis = markdown;
 
     } catch (error) {
-      console.log(chalk.red(`  ✗ Error analyzing project: ${(error as Error).message}`));
+      console.log(chalk.red(`  ✗Error analyzing project: ${(error as Error).message}`));
       console.log('');
     }
   }
@@ -1276,9 +1276,9 @@ export class InkBasedRepl {
         child.on('close', (code) => {
           const duration = ((Date.now() - startTime) / 1000).toFixed(2);
           if (code === 0) {
-            console.log(chalk.green(`  ✓ exit 0`) + chalk.dim(` (${duration}s)`));
+            console.log(chalk.green(`  ✓exit 0`) + chalk.dim(` (${duration}s)`));
           } else {
-            console.log(chalk.red(`  ✗ exit ${code}`) + chalk.dim(` (${duration}s)`));
+            console.log(chalk.red(`  ✗exit ${code}`) + chalk.dim(` (${duration}s)`));
           }
           resolve();
         });
@@ -1442,7 +1442,7 @@ export class InkBasedRepl {
       },
 
       onContextCompress: (orig: number, result: number, action: string) => {
-        console.log(chalk.dim(`  🔄 context: ${orig} → ${result} tokens (${action})`));
+        console.log(chalk.dim(`  🔄 context: ${orig} ►${result} tokens (${action})`));
       },
     });
 
@@ -1463,7 +1463,7 @@ export class InkBasedRepl {
 
       // Show summary
       console.log('');
-      console.log(chalk.dim(`  ✓ ${result.turnsCompleted} turns · ${totalTokens.toLocaleString()} tokens`));
+      console.log(chalk.dim(`  ✓${result.turnsCompleted} turns · ${totalTokens.toLocaleString()} tokens`));
 
       // Persist session
       this.sessionManager.persist(this.sessionId);
@@ -1536,7 +1536,7 @@ export class InkBasedRepl {
     }
 
     console.log('');
-    console.log(chalk.yellow.bold('  ⚠ Approval Required'));
+    console.log(chalk.yellow.bold('  ⚠Approval Required'));
     console.log(chalk.gray(`  Tool: ${request.toolName}`));
     console.log(chalk.gray(`  Risk: ${request.risk}`));
     console.log('');
@@ -1622,8 +1622,8 @@ export class InkBasedRepl {
       // Detect priority from task text
       const detectPriority = (text: string): 'high' | 'medium' | 'low' | undefined => {
         if (/high|critical|urgent|重要/i.test(text)) return 'high';
-        if (/low|minor|低/i.test(text)) return 'low';
-        if (/medium|normal|中/i.test(text)) return 'medium';
+        if (/low|minor/i.test(text)) return 'low';
+        if (/medium|normal/i.test(text)) return 'medium';
         return undefined;
       };
 
@@ -1669,7 +1669,7 @@ export class InkBasedRepl {
    * Show compact execution status header
    */
   private showExecutionHeader(): void {
-    console.log(chalk.dim('    ┌─ 执行开始 ' + '─'.repeat(40)));
+    console.log(chalk.dim('    ┌─ 执行开始' + '─'.repeat(40)));
   }
 
   /**
@@ -1677,9 +1677,9 @@ export class InkBasedRepl {
    */
   private updateStatusLine(): void {
     const stats = this.toolCallStatusDisplay.getStats();
-    const statusIcon = stats.error > 0 ? chalk.red('⚠') : stats.running > 0 ? chalk.yellow('◉') : chalk.green('✓');
+    const statusIcon = stats.error > 0 ? chalk.red('●') : stats.running > 0 ? chalk.yellow('●') : chalk.green('●');
     const turnStr = this.turnCount > 0 ? `turn ${this.turnCount}` : 'init';
-    const toolStr = `${stats.success}✓ ${stats.error}✗`;
+    const toolStr = `${stats.success}✓${stats.error}✗`;
     
     const status = `${statusIcon} ${chalk.dim(turnStr)} ${chalk.dim('·')} ${chalk.dim(toolStr)}`;
     

@@ -23,13 +23,13 @@ export class ProgressIndicator extends EventEmitter {
   private timer: NodeJS.Timeout | null = null;
 
   // Spinner frames
-  private spinnerFrames = ['‚†ã', '‚†ô', '‚†π', '‚†∏', '‚†º', '‚†¥', '‚†¶', '‚†ß', '‚†á', '‚†è'];
+  private spinnerFrames = ['‚†?, '‚†?, '‚†?, '‚†?, '‚†?, '‚†?, '‚†?, '‚†?, '‚†?, '‚†?];
   private currentFrame = 0;
 
   // Bar characters
   private barWidth = 20;
-  private filledChar = '‚ñà';
-  private emptyChar = '‚ñë';
+  private filledChar = '‚ñ?;
+  private emptyChar = '‚ñ?;
 
   constructor(protected options: ProgressOptions = {}) {
     super();
@@ -87,7 +87,7 @@ export class ProgressIndicator extends EventEmitter {
 
     // Clear the line and show completion
     process.stdout.write('\r\x1b[K');
-    console.log(chalk.green(`‚úì ${message}`));
+    console.log(chalk.green(`‚ú?${message}`));
 
     this.isActive = false;
     this.emit('complete', { progress: 100, duration: Date.now() - this.startTime });
@@ -104,7 +104,7 @@ export class ProgressIndicator extends EventEmitter {
 
     // Show error in red
     process.stdout.write('\r\x1b[K');
-    console.log(chalk.red(`‚úó ${message}: ${errorMessage}`));
+    console.log(chalk.red(`‚ú?${message}: ${errorMessage}`));
 
     this.isActive = false;
     this.emit('fail', { error: errorMessage, duration: Date.now() - this.startTime });

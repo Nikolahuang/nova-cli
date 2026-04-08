@@ -4,22 +4,22 @@
 
 import path from 'node:path';
 import os from 'node:os';
-import { ConfigManager } from '../../../core/src/config/ConfigManager.js';
-import { AuthManager } from '../../../core/src/auth/AuthManager.js';
-import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.js';
-import { SessionManager } from '../../../core/src/session/SessionManager.js';
-import type { SessionId } from '../../../core/src/types/session.js';
-import type { ModelConfig } from '../../../core/src/types/config.js';
-import { AgentLoop } from '../../../core/src/session/AgentLoop.js';
-import { ModelClient } from '../../../core/src/model/ModelClient.js';
-import { ModelConnectionTester } from '../../../core/src/model/ModelConnectionTester.js';
-import { McpManager } from '../../../core/src/mcp/McpManager.js';
-import { SkillRegistry } from '../../../core/src/extensions/SkillRegistry.js';
-import { SkillInstaller } from '../../../core/src/extensions/SkillInstaller.js';
-import { ContextCompressor } from '../../../core/src/context/ContextCompressor.js';
-import { ApprovalManager } from '../../../core/src/security/ApprovalManager.js';
-import { HookExecutor } from '../../../core/src/security/HookExecutor.js';
-import { NovaError, getErrorMessage } from '../../../core/src/types/errors.js';
+import { ConfigManager } from '../../../packages/core/src/config/ConfigManager.js';
+import { AuthManager } from '../../../packages/core/src/auth/AuthManager.js';
+import { ToolRegistry } from '../../../packages/core/src/tools/ToolRegistry.js';
+import { SessionManager } from '../../../packages/core/src/session/SessionManager.js';
+import type { SessionId } from '../../../packages/core/src/types/session.js';
+import type { ModelConfig } from '../../../packages/core/src/types/config.js';
+import { AgentLoop } from '../../../packages/core/src/session/AgentLoop.js';
+import { ModelClient } from '../../../packages/core/src/model/ModelClient.js';
+import { ModelConnectionTester } from '../../../packages/core/src/model/ModelConnectionTester.js';
+import { McpManager } from '../../../packages/core/src/mcp/McpManager.js';
+import { SkillRegistry } from '../../../packages/core/src/extensions/SkillRegistry.js';
+import { SkillInstaller } from '../../../packages/core/src/extensions/SkillInstaller.js';
+import { ContextCompressor } from '../../../packages/core/src/context/ContextCompressor.js';
+import { ApprovalManager } from '../../../packages/core/src/security/ApprovalManager.js';
+import { HookExecutor } from '../../../packages/core/src/security/HookExecutor.js';
+import { NovaError, getErrorMessage } from '../../../packages/core/src/types/errors.js';
 import {
   readFileHandler,
   writeFileHandler,
@@ -34,7 +34,7 @@ import {
   memoryWriteHandler,
   todoHandler,
   taskHandler,
-} from '../../../core/src/tools/impl/index.js';
+} from '../../../packages/core/src/tools/impl/index.js';
 import {
   readFileSchema,
   writeFileSchema,
@@ -49,10 +49,10 @@ import {
   memoryWriteSchema,
   todoSchema,
   taskSchema,
-} from '../../../core/src/tools/schemas/index.js';
-import type { NovaConfig } from '../../../core/src/types/config.js';
-import { OllamaManager } from '../../../core/src/model/providers/OllamaManager.js';
-import { ModelValidator } from '../../../core/src/model/ModelValidator.js';
+} from '../../../packages/core/src/tools/schemas/index.js';
+import type { NovaConfig } from '../../../packages/core/src/types/config.js';
+import { OllamaManager } from '../../../packages/core/src/model/providers/OllamaManager.js';
+import { ModelValidator } from '../../../packages/core/src/model/ModelValidator.js';
 import { parseCliArgs } from './parseArgs.js';
 import { InteractiveRepl } from './InteractiveRepl.js';
 import { InkBasedRepl } from './InkBasedRepl.js';
@@ -343,7 +343,7 @@ export class NovaApp {
     }
 
     // Task tools (if user mentions agent/sub-agent)
-    if (promptLower.includes('agent') || promptLower.includes('子代理') || 
+    if (promptLower.includes('agent') || promptLower.includes('子代理') ||
         promptLower.includes('subagent') || promptLower.includes('并行') ||
         promptLower.includes('parallel')) {
       selectedTools.push('task');
@@ -556,7 +556,7 @@ export class NovaApp {
       : `${providerName.toUpperCase()}_API_KEY`;
 
     console.log('');
-    console.log(`\x1b[33m  ⚠ No API key found for "${providerName}"\x1b[0m`);
+    console.log(`\x1b[33m  ⚠No API key found for "${providerName}"\x1b[0m`);
     console.log(`\x1b[90m  You can also set it via: export ${envKey}=<your-key>\x1b[0m`);
     console.log('');
 
@@ -589,7 +589,7 @@ export class NovaApp {
     // Get model config to check for built-in search capability
     const modelConfigResult = this.configManager.getModelConfig(config.core.defaultModel);
 
-    const { buildSystemPrompt } = await import('../../../core/src/context/defaultSystemPrompt.js');
+    const { buildSystemPrompt } = await import('../../../packages/core/src/context/defaultSystemPrompt.js');
     const chalk = await import('chalk');
     const systemPrompt = buildSystemPrompt({
       workingDirectory: cwd,
@@ -662,11 +662,11 @@ export class NovaApp {
         console.error('    \x1b[36mnova auth set <provider> [--key <api-key>] [--base-url <url>]\x1b[0m');
         console.error('');
         console.error('  Built-in providers:');
-        console.error('    \x1b[90m• anthropic  \x1b[0m - Claude (claude-3.5-sonnet, etc.)');
-        console.error('    \x1b[90m• openai     \x1b[0m - GPT (gpt-4o, gpt-4-turbo, etc.)');
-        console.error('    \x1b[90m• google     \x1b[0m - Gemini (gemini-1.5-pro, etc.)');
-        console.error('    \x1b[90m• deepseek   \x1b[0m - DeepSeek (deepseek-v3, etc.)');
-        console.error('    \x1b[90m• ollama     \x1b[0m - Local models (llama3.2, etc.)');
+        console.error('    \x1b[90m•anthropic  \x1b[0m - Claude (claude-3.5-sonnet, etc.)');
+        console.error('    \x1b[90m•openai     \x1b[0m - GPT (gpt-4o, gpt-4-turbo, etc.)');
+        console.error('    \x1b[90m•google     \x1b[0m - Gemini (gemini-1.5-pro, etc.)');
+        console.error('    \x1b[90m•deepseek   \x1b[0m - DeepSeek (deepseek-v3, etc.)');
+        console.error('    \x1b[90m•ollama     \x1b[0m - Local models (llama3.2, etc.)');
         console.error('');
         console.error('  Examples:');
         console.error('    \x1b[90mnova auth set anthropic --key sk-ant-xxx\x1b[0m');
@@ -963,17 +963,17 @@ export class NovaApp {
     // Show connected providers with latency
     for (const status of connected) {
       const latencyStr = status.latency ? ` (${status.latency}ms)` : '';
-      console.log(`\x1b[32m  ✓ ${status.provider}${latencyStr}\x1b[0m`);
+      console.log(`\x1b[32m  ✓${status.provider}${latencyStr}\x1b[0m`);
     }
 
     // Show warnings for unavailable providers
     for (const status of unavailable) {
-      console.log(`\x1b[33m  ⚠ ${status.provider}: ${status.message}\x1b[0m`);
+      console.log(`\x1b[33m  ⚠${status.provider}: ${status.message}\x1b[0m`);
     }
 
     // Show errors
     for (const status of errors) {
-      console.log(`\x1b[31m  ✗ ${status.provider}: ${status.message}\x1b[0m`);
+      console.log(`\x1b[31m  ✗${status.provider}: ${status.message}\x1b[0m`);
     }
 
     // Show unconfigured hint if any
@@ -1042,7 +1042,7 @@ export class NovaApp {
       let defaultModel = args.defaultModel || '';
       
       try {
-        const { OpenAICompatibleProvider } = await import('../../../core/src/model/providers/OpenAICompatibleProvider.js');
+        const { OpenAICompatibleProvider } = await import('../../../packages/core/src/model/providers/OpenAICompatibleProvider.js');
         const probe = new (class extends OpenAICompatibleProvider {
           constructor() {
             super({ apiKey: key, baseUrl, model: 'probe' });
@@ -1125,14 +1125,14 @@ export class NovaApp {
       // Save configuration to disk
       await this.configManager.save(config);
 
-      console.log(`\x1b[32m✓ Provider "${providerName}" added\x1b[0m`);
+      console.log(`\x1b[32m✓Provider "${providerName}" added\x1b[0m`);
       console.log(`  Base URL: ${baseUrl}`);
       if (availableModels.length > 0) {
         console.log(`  Available models (${availableModels.length}):`);
         // Show first 10 models, indicate if more
         const shown = availableModels.slice(0, 10);
         for (const m of shown) {
-          const marker = m === defaultModel ? ' \x1b[33m← selected\x1b[0m' : '';
+          const marker = m === defaultModel ? ' \x1b[33m★selected\x1b[0m' : '';
           console.log(`    - ${m}${marker}`);
         }
         if (availableModels.length > 10) {
@@ -1214,7 +1214,7 @@ export class NovaApp {
       
       const platforms = [
         { name: 'alibaba', display: 'Alibaba Cloud (阿里云百炼)', models: 'qwen3.5-plus, qwen3-coder, glm-5', price: 'Lite ¥40/mo, Pro ¥200/mo' },
-        { name: 'tencent', display: 'Tencent Cloud (腾讯云)', models: 'hy-2.0-instruct, glm-5, kimi-k2.5', price: 'Lite ¥7.9/mo, Pro ¥39.9/mo' },
+        { name: 'tencent', display: 'Tencent Cloud (腾讯混元)', models: 'hy-2.0-instruct, glm-5, kimi-k2.5', price: 'Lite ¥7.9/mo, Pro ¥39.9/mo' },
         { name: 'volcengine', display: 'Volcengine (火山引擎)', models: 'doubao-seed-code, deepseek-v3.2, glm-4.7', price: 'Lite ¥9.9/mo, Pro ¥49.9/mo' },
         { name: 'baidu', display: 'Baidu Qianfan (百度千帆)', models: 'glm-5, kimi-k2.5, ernie-4.5', price: '¥39.9/mo' },
         { name: 'kimi', display: 'Kimi Code', models: 'kimi-k2, kimi-k2.5', price: '¥49/mo' },
@@ -1325,7 +1325,7 @@ export class NovaApp {
       // Save API key
       await this.authManager.setCredentials({ provider: providerName, apiKey });
 
-      console.log(`\x1b[32m✓ Coding Plan provider "${platform}" added\x1b[0m`);
+      console.log(`\x1b[32m✓Coding Plan provider "${platform}" added\x1b[0m`);
       console.log(`  Provider name: ${providerName}`);
       console.log(`  Default model: ${defaultModels[platform] || 'glm-5'}`);
       console.log(`  Available models: ${Object.keys(platformModels[platform] || {}).join(', ') || '(custom)'}`);
@@ -1637,12 +1637,12 @@ export class NovaApp {
     console.log('        GITHUB_TOKEN: your-token');
     console.log('');
     console.log('Popular MCP servers (install via npm):');
-    console.log('  @modelcontextprotocol/server-filesystem   — file system');
-    console.log('  @modelcontextprotocol/server-github       — GitHub API');
-    console.log('  @modelcontextprotocol/server-brave-search — web search');
-    console.log('  @modelcontextprotocol/server-sqlite       — SQLite');
-    console.log('  @modelcontextprotocol/server-postgres     — PostgreSQL');
-    console.log('  @modelscope/mcp-server                    — ModelScope (魔搭)');
+    console.log('  @modelcontextprotocol/server-filesystem   �?file system');
+    console.log('  @modelcontextprotocol/server-github       �?GitHub API');
+    console.log('  @modelcontextprotocol/server-brave-search �?web search');
+    console.log('  @modelcontextprotocol/server-sqlite       �?SQLite');
+    console.log('  @modelcontextprotocol/server-postgres     �?PostgreSQL');
+    console.log('  @modelscope/mcp-server                    �?ModelScope (魔搭)');
   }
 
   // ==================== Skills Command ====================
@@ -1703,7 +1703,7 @@ export class NovaApp {
         } else {
           console.log(`\x1b[32mSuccessfully installed ${installed.length} skill${installed.length !== 1 ? 's' : ''}:\x1b[0m`);
           for (const skill of installed) {
-            console.log(`  \x1b[36m✓ ${skill.name}\x1b[0m`);
+            console.log(`  \x1b[36m�?${skill.name}\x1b[0m`);
           }
         }
       } catch (error: any) {
@@ -1757,8 +1757,8 @@ export class NovaApp {
 
     const BOX = {
       tl: '╭', tr: '╮', bl: '╰', br: '╯',
-      h: '─', v: '│', ht: '├', htr: '┤',
-      hThick: '━', diamond: '◆', arrow: '→',
+      h: '─', v: '│', ht: '┬', htr: '┐',
+      hThick: '═', diamond: '◆', arrow: '►',
     };
 
     const termCols = process.stdout.columns || 80;
@@ -1822,7 +1822,7 @@ export class NovaApp {
     // Coding Plan
     console.log(B.brand + BOX.diamond + B.reset + ' ' + B.primary + 'CODING PLAN' + B.reset);
     console.log('');
-    console.log(B.muted + '  alibaba (阿里云), tencent (腾讯云), volcengine (火山引擎),' + B.reset);
+    console.log(B.muted + '  alibaba (阿里�?, tencent (腾讯�?, volcengine (火山引擎),' + B.reset);
     console.log(B.muted + '  baidu (百度千帆), kimi, zhipu (智谱), minimax' + B.reset);
     console.log('');
 
@@ -1884,10 +1884,10 @@ export class NovaApp {
     // Welcome banner
     console.log('');
     console.log(`${B.brand}╔══════════════════════════════════════════════════════════════╗${B.reset}`);
-    console.log(`${B.brand}║${B.reset}                                                              ${B.brand}║${B.reset}`);
-    console.log(`${B.brand}║${B.reset}   ${B.primary}Welcome to NOVA CLI!${B.reset}                                   ${B.brand}║${B.reset}`);
-    console.log(`${B.brand}║${B.reset}   ${B.muted}Your AI-powered terminal assistant${B.reset}                       ${B.brand}║${B.reset}`);
-    console.log(`${B.brand}║${B.reset}                                                              ${B.brand}║${B.reset}`);
+    console.log(`${B.brand}�?{B.reset}                                                              ${B.brand}�?{B.reset}`);
+    console.log(`${B.brand}�?{B.reset}   ${B.primary}Welcome to NOVA CLI!${B.reset}                                   ${B.brand}�?{B.reset}`);
+    console.log(`${B.brand}�?{B.reset}   ${B.muted}Your AI-powered terminal assistant${B.reset}                       ${B.brand}�?{B.reset}`);
+    console.log(`${B.brand}�?{B.reset}                                                              ${B.brand}�?{B.reset}`);
     console.log(`${B.brand}╚══════════════════════════════════════════════════════════════╝${B.reset}`);
     console.log('');
     console.log(`${B.muted}It looks like this is your first time using Nova CLI.${B.reset}`);
@@ -1899,7 +1899,7 @@ export class NovaApp {
     console.log('');
     console.log(`  ${B.info}1.${B.reset} ${B.primary}Ollama (Local)${B.reset} - ${B.muted}Run models locally, free, no API key needed${B.reset}`);
     console.log(`  ${B.info}2.${B.reset} ${B.primary}Ollama Cloud${B.reset} - ${B.muted}Cloud-hosted models, requires API key${B.reset}`);
-    console.log(`  ${B.info}3.${B.reset} ${B.primary}Coding Plan${B.reset} - ${B.muted}国内平台 (阿里云/腾讯云/智谱等), 固定月费${B.reset}`);
+    console.log(`  ${B.info}3.${B.reset} ${B.primary}Coding Plan${B.reset} - ${B.muted}国内平台 (阿里�?腾讯�?智谱�?, 固定月费${B.reset}`);
     console.log(`  ${B.info}4.${B.reset} ${B.primary}Custom Provider${B.reset} - ${B.muted}Enter your own API endpoint${B.reset}`);
     console.log(`  ${B.info}5.${B.reset} ${B.muted}Skip setup${B.reset} - ${B.muted}Configure later with nova auth set${B.reset}`);
     console.log('');
@@ -1915,7 +1915,7 @@ export class NovaApp {
           const manager = new OllamaManager('http://localhost:11434');
           
           if (await manager.ping()) {
-            console.log(`${B.success}✓ Ollama is running!${B.reset}`);
+            console.log(`${B.success}�?Ollama is running!${B.reset}`);
             const models = await manager.listModels();
             
             if (models.length > 0) {
@@ -1929,7 +1929,7 @@ export class NovaApp {
               await this.configManager.save(config);
               
               console.log('');
-              console.log(`${B.success}✓ Setup complete!${B.reset}`);
+              console.log(`${B.success}�?Setup complete!${B.reset}`);
               console.log(`${B.muted}Default model: ${defaultModel}${B.reset}`);
               console.log(`${B.muted}Run 'nova' to start chatting!${B.reset}`);
               rl.close();
@@ -2021,7 +2021,7 @@ export class NovaApp {
           await this.configManager.save(config);
           
           console.log('');
-          console.log(`${B.success}✓ Setup complete!${B.reset}`);
+          console.log(`${B.success}�?Setup complete!${B.reset}`);
           console.log(`${B.muted}Default model: glm-5${B.reset}`);
           console.log(`${B.muted}Run 'nova' to start chatting!${B.reset}`);
           rl.close();
@@ -2160,7 +2160,7 @@ export class NovaApp {
           const selected = sessions[n - 1];
           const session = this.sessionManager.loadFromDisk(selected.id);
           if (session) {
-            console.log(`\x1b[36m  Restoring session: ${selected.id.slice(0, 8)} — ${selected.title}\x1b[0m`);
+            console.log(`\x1b[36m  Restoring session: ${selected.id.slice(0, 8)} �?${selected.title}\x1b[0m`);
             resolve(session.id);
           } else {
             console.log('\x1b[33m  Could not load session. Starting fresh.\x1b[0m');

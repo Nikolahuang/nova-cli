@@ -114,7 +114,7 @@ export function formatError(error: {
         lines.push(`    \x1b[32mâœ“\x1b[0m ${s.command}`);
         lines.push(`      ${s.description}`);
       } else {
-        lines.push(`    â€¢ ${s.description}`);
+        lines.push(`    â€?${s.description}`);
       }
     });
   }
@@ -138,7 +138,7 @@ export function formatSuccess(data: {
   }
   
   const lines: string[] = [];
-  lines.push(`\x1b[32m  âœ“ ${data.message}\x1b[0m`);
+  lines.push(`\x1b[32m  âœ?${data.message}\x1b[0m`);
   if (data.details) {
     Object.entries(data.details).forEach(([key, value]) => {
       lines.push(`    ${key}: ${value}`);

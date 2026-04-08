@@ -502,7 +502,7 @@ export async function runAgentCLITests(): Promise<void> {
     console.log('=' .repeat(60));
     
     for (const test of suite.tests) {
-      const status = test.passed ? 'âœ…' : 'âŒ';
+      const status = test.passed ? 'âœ? : 'â?;
       console.log(`${status} ${test.name} (${test.duration}ms)`);
       if (test.error) {
         console.log(`   Error: ${test.error}`);

@@ -3,8 +3,8 @@
 // ============================================================================
 //
 // Supports multiple Coding Plan platforms with a single API key:
-// - Alibaba Cloud (阿里云百炼)
-// - Tencent Cloud (腾讯云)
+// - Alibaba Cloud (阿里云百�?
+// - Tencent Cloud (腾讯�?
 // - Volcengine (火山引擎)
 // - Baidu Qianfan (百度千帆)
 // - Kimi Code
@@ -89,14 +89,14 @@ const PLATFORM_CONFIGS: Record<CodingPlanPlatform, {
  * 
  * @example
  * ```typescript
- * // 使用阿里云百炼 Coding Plan
+ * // 使用阿里云百�?Coding Plan
  * const provider = new CodingPlanProvider({
  *   platform: 'alibaba',
  *   apiKey: 'your-coding-plan-api-key',
  *   model: 'qwen3-coder',
  * });
  * 
- * // 使用自定义 Coding Plan
+ * // 使用自定�?Coding Plan
  * const provider = new CodingPlanProvider({
  *   platform: 'custom',
  *   customBaseUrl: 'https://your-coding-plan-endpoint.com/v1',

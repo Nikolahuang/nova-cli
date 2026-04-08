@@ -46,9 +46,9 @@ export class ConfirmDialog {
     // Style the message based on type
     let styledMessage: string;
     if (danger) {
-      styledMessage = chalk.redBright('âš  ') + chalk.bold.red(message);
+      styledMessage = chalk.redBright('âš?') + chalk.bold.red(message);
     } else if (warning) {
-      styledMessage = chalk.yellowBright('âš  ') + chalk.bold.yellow(message);
+      styledMessage = chalk.yellowBright('âš?') + chalk.bold.yellow(message);
     } else {
       styledMessage = chalk.cyan('? ') + chalk.bold(message);
     }

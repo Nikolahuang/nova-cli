@@ -1,11 +1,11 @@
 // ============================================================================
-// Error Enhancement - 增强的错误提示系统
+// Error Enhancement - 增强的错误提示系�?
 // ============================================================================
 
 import { CliUI, Colors, BoxChars } from './CliUI.js';
 
 /**
- * 增强的错误类型
+ * 增强的错误类�?
  */
 export enum ErrorType {
   CONFIG = 'CONFIG',
@@ -39,7 +39,7 @@ interface ErrorDetail {
 }
 
 /**
- * 错误增强器
+ * 错误增强�?
  */
 export class ErrorEnhancer {
   private static errorMap: Map<RegExp, ErrorDetail> = new Map([
@@ -162,7 +162,7 @@ export class ErrorEnhancer {
   static enhance(error: Error | string): ErrorDetail {
     const message = error instanceof Error ? error.message : error;
 
-    // 查找匹配的错误模式
+    // 查找匹配的错误模�?
     for (const [pattern, detail] of this.errorMap.entries()) {
       if (pattern.test(message)) {
         return {
@@ -191,13 +191,13 @@ export class ErrorEnhancer {
   }
 
   /**
-   * 显示增强的错误信息
+   * 显示增强的错误信�?
    */
   static showError(error: Error | string, context?: string): void {
     const detail = this.enhance(error);
     const width = CliUI.getWidth(60, 100);
 
-    // 打印错误框
+    // 打印错误�?
     console.error('');
     console.error(
       `${Colors.error}+${'-'.repeat(width - 2)}+${Colors.reset}`
@@ -285,7 +285,7 @@ export class ErrorEnhancer {
   }
 
   /**
-   * 添加自定义错误模式
+   * 添加自定义错误模�?
    */
   static addErrorPattern(pattern: RegExp, detail: ErrorDetail): void {
     this.errorMap.set(pattern, detail);
@@ -330,7 +330,7 @@ export class TaskProgressIndicator {
   private static message: string = '';
 
   /**
-   * 开始任务
+   * 开始任�?
    */
   static start(message: string): void {
     this.startTime = Date.now();
@@ -394,13 +394,13 @@ export class TableRenderer {
     ).join('');
     console.log(headerRow);
 
-    // 渲染分隔线
+    // 渲染分隔�?
     const separator = colWidths.map(w =>
       Colors.dim + BoxChars.h.repeat(w - 1) + BoxChars.ht
     ).join('') + BoxChars.h;
     console.log(separator);
 
-    // 渲染数据行
+    // 渲染数据�?
     rows.forEach(row => {
       const cells = row.map((cell, i) =>
         `${Colors.reset}${String(cell).padEnd(colWidths[i])}`

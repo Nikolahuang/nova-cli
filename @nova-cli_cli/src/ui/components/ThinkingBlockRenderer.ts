@@ -311,7 +311,7 @@ export class ThinkingBlockRenderer {
       for (const line of previewLines) {
         const truncatedLine = line.slice(0, this.options.maxLineLength);
         // Gray/dim styling for thinking content
-        console.log(chalk.gray.dim('  â”‚ ') + chalk.gray.dim(truncatedLine));
+        console.log(chalk.gray.dim('  â”?') + chalk.gray.dim(truncatedLine));
       }
 
       if (truncated) {

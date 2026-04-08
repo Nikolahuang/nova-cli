@@ -3,7 +3,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import type { SessionInfo, NovaConfig } from '../../../core/src/types/config.js';
+import type { SessionInfo, NovaConfig } from '../../../packages/core/src/types/config.js';
 import { IFlowDropdown } from '../ui/IFlowDropdown.js';
 
 export interface IFlowReplOptions {
@@ -58,15 +58,15 @@ export class IFlowRepl {
    */
   private showHeader(): void {
     const width = Math.min(process.stdout.columns || 80, 70);
-    const border = 'â”'.repeat(width);
+    const border = 'â”?.repeat(width);
     const title = ' NOVA CLI Â· AI-Powered Terminal Assistant ';
-    const header = `â•­${border}â•®\nâ”‚${title.padEnd(width)}â”‚\nâ”œ${'â”€'.repeat(width)}â”¤`;
+    const header = `â•?{border}â•®\nâ”?{title.padEnd(width)}â”‚\nâ”?{'â”€'.repeat(width)}â”¤`;
 
     console.log(chalk.bgBlue.black(header));
 
     // Model info line
     const modelShort = this.session?.model.split('/').pop() || this.session?.model || 'unknown';
-    const modelLine = `â”‚ ${chalk.cyan('Model:')} ${chalk.white(modelShort.padEnd(50))}${chalk.blue('â”‚')}`;
+    const modelLine = `â”?${chalk.cyan('Model:')} ${chalk.white(modelShort.padEnd(50))}${chalk.blue('â”?)}`;
     console.log(chalk.blue(modelLine));
 
     // Mode and directory info
@@ -75,13 +75,13 @@ export class IFlowRepl {
     const modeColor = this.session?.mode === 'auto' ? 'green' :
                      this.session?.mode === 'plan' ? 'yellow' : 'blue';
 
-    const modeLine = `â”‚ ${chalk[modeColor](`Mode:  ${modeLabel}`).padEnd(56)}${chalk.blue('â”‚')}`;
-    const dirLine = `â”‚ ${chalk.cyan('Dir:')} ${chalk.white((this.session?.workingDirectory || '.').padEnd(49))}${chalk.blue('â”‚')}`;
+    const modeLine = `â”?${chalk[modeColor](`Mode:  ${modeLabel}`).padEnd(56)}${chalk.blue('â”?)}`;
+    const dirLine = `â”?${chalk.cyan('Dir:')} ${chalk.white((this.session?.workingDirectory || '.').padEnd(49))}${chalk.blue('â”?)}`;
 
     console.log(chalk.blue(modeLine));
     console.log(chalk.blue(dirLine));
 
-    const footer = `â•°${'â”'.repeat(width)}â•¯`;
+    const footer = `â•?{'â”?.repeat(width)}â•¯`;
     console.log(chalk.blue(footer));
     console.log('');
   }
@@ -93,17 +93,17 @@ export class IFlowRepl {
     const messages = [
       chalk.cyan('ðŸš€ Welcome to Nova CLI - Your AI-Powered Terminal Assistant'),
       '',
-      chalk.yellow('âœ¨ Features:'),
-      '  â€¢ Multiple AI model providers (OpenAI, Anthropic, Ollama, etc.)',
-      '  â€¢ Smart file operations with @file references',
-      '  â€¢ Built-in tools for code analysis and generation',
-      '  â€¢ MCP server integration for extended functionality',
-      '  â€¢ Session persistence and history management',
+      chalk.yellow('âœ?Features:'),
+      '  â€?Multiple AI model providers (OpenAI, Anthropic, Ollama, etc.)',
+      '  â€?Smart file operations with @file references',
+      '  â€?Built-in tools for code analysis and generation',
+      '  â€?MCP server integration for extended functionality',
+      '  â€?Session persistence and history management',
       '',
       chalk.green('ðŸŽ¯ Quick Start:'),
-      '  â€¢ Type /help for command suggestions',
-      '  â€¢ Use â†‘â†“ arrows to navigate, Enter to select',
-      '  â€¢ Press ESC to cancel any operation',
+      '  â€?Type /help for command suggestions',
+      '  â€?Use â†‘â†“ arrows to navigate, Enter to select',
+      '  â€?Press ESC to cancel any operation',
       '',
       chalk.blue('ðŸ’¡ Pro Tip:'),
       '  Try typing / and see the interactive dropdown!',
@@ -197,7 +197,7 @@ export class IFlowRepl {
 
     // Simulate command execution delay
     setTimeout(() => {
-      console.log(chalk.green(`âœ“ Command executed: ${command}`));
+      console.log(chalk.green(`âœ?Command executed: ${command}`));
     }, 300);
   }
 

@@ -79,20 +79,17 @@
     "react": "^18.2.0",
     "semver": "^7.6.0",
     "tesseract.js": "^7.0.0",
+    "tsx": "^4.21.0",
     "uuid": "^9.0.0",
     "yaml": "^2.4.0",
     "yargs": "^17.7.0",
-    "zod": "^3.22.0",
-    "tsx": "^4.21.0"
+    "zod": "^3.22.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
     "ink-testing-library": "^3.0.0",
     "typescript": "^5.9.3"
-  },
-  "peerDependencies": {
-    "tsx": ">=4.0.0"
   },
   "peerDependenciesMeta": {
     "tsx": {

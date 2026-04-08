@@ -10,22 +10,22 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { execSync, spawn } from 'node:child_process';
 import chalk from 'chalk';
-import type { NovaConfig } from '../../../core/src/types/config.js';
-import type { SessionId, ApprovalRequest, ApprovalResponse } from '../../../core/src/types/session.js';
-import { AgentLoop } from '../../../core/src/session/AgentLoop.js';
-import { ModelClient } from '../../../core/src/model/ModelClient.js';
-import { SessionManager } from '../../../core/src/session/SessionManager.js';
-import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.js';
-import { ApprovalManager } from '../../../core/src/security/ApprovalManager.js';
-import { buildSystemPrompt } from '../../../core/src/context/defaultSystemPrompt.js';
+import type { NovaConfig } from '../../../packages/core/src/types/config.js';
+import type { SessionId, ApprovalRequest, ApprovalResponse } from '../../../packages/core/src/types/session.js';
+import { AgentLoop } from '../../../packages/core/src/session/AgentLoop.js';
+import { ModelClient } from '../../../packages/core/src/model/ModelClient.js';
+import { SessionManager } from '../../../packages/core/src/session/SessionManager.js';
+import { ToolRegistry } from '../../../packages/core/src/tools/ToolRegistry.js';
+import { ApprovalManager } from '../../../packages/core/src/security/ApprovalManager.js';
+import { buildSystemPrompt } from '../../../packages/core/src/context/defaultSystemPrompt.js';
 import { ThinkingBlockRenderer } from '../ui/components/ThinkingBlockRenderer.js';
 import { TodoProgressPanel, type TodoItem } from '../ui/components/TodoProgressPanel.js';
 import { UserMessageHighlight } from '../ui/components/UserMessageHighlight.js';
-import type { McpManager, McpServerStatus } from '../../../core/src/mcp/McpManager.js';
-import type { SkillRegistry, SkillDefinition } from '../../../core/src/extensions/SkillRegistry.js';
-import type { ConfigManager } from '../../../core/src/config/ConfigManager.js';
-import type { AuthManager } from '../../../core/src/auth/AuthManager.js';
-import { OllamaManager } from '../../../core/src/model/providers/OllamaManager.js';
+import type { McpManager, McpServerStatus } from '../../../packages/core/src/mcp/McpManager.js';
+import type { SkillRegistry, SkillDefinition } from '../../../packages/core/src/extensions/SkillRegistry.js';
+import type { ConfigManager } from '../../../packages/core/src/config/ConfigManager.js';
+import type { AuthManager } from '../../../packages/core/src/auth/AuthManager.js';
+import { OllamaManager } from '../../../packages/core/src/model/providers/OllamaManager.js';
 import { CompletionHelper } from '../utils/CompletionHelper.js';
 import { EnhancedCompleter, type CompletionCandidate } from '../utils/EnhancedCompleter.js';
 
@@ -78,14 +78,14 @@ interface ToolCallState {
 // ============================================================================
 
 const BOX = {
-  tl: '╭', tr: '╮', bl: '╰', br: '╯',
-  h: '─', v: '│',
-  ht: '├', htr: '┤', cross: '┼',
-  arrow: '›', bullet: '•', check: '✓', crossX: '✗', dot: '·',
-  diamond: '◆', star: '★', circle: '○', circleFull: '●',
-  spinner: ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'],
-  hThick: '━', vThick: '┃',
-  arrowRight: '→', arrowLeft: '←', arrowUp: '↑', arrowDown: '↓',
+  tl: '�?, tr: '�?, bl: '�?, br: '�?,
+  h: '─', v: '�?,
+  ht: '�?, htr: '�?, cross: '�?,
+  arrow: '�?, bullet: '�?, check: '�?, crossX: '�?, dot: '·',
+  diamond: '�?, star: '�?, circle: '�?, circleFull: '�?,
+  spinner: ['�?,'�?,'�?,'�?,'�?,'�?,'�?,'�?,'�?,'�?],
+  hThick: '�?, vThick: '�?,
+  arrowRight: '�?, arrowLeft: '�?, arrowUp: '�?, arrowDown: '�?,
 };
 
 const C = {
@@ -223,7 +223,7 @@ export class InteractiveRepl {
       this.sessionId = existing ? this.restoreSessionId as SessionId : this.createInitialSession();
       if (existing) {
         const msgs = this.sessionManager.getMessages(this.sessionId!);
-        console.log(C.info(`  Restored session: ${String(this.sessionId).slice(0, 8)} — ${msgs.length} messages`));
+        console.log(C.info(`  Restored session: ${String(this.sessionId).slice(0, 8)} �?${msgs.length} messages`));
       }
     } else {
       this.sessionId = this.createInitialSession();
@@ -454,7 +454,7 @@ export class InteractiveRepl {
   /** Display enhanced completions with type icons */
   private showEnhancedCompletions(completions: CompletionCandidate[]): void {
     const typeIcons: Record<string, string> = {
-      command: '⌘',
+      command: '�?,
       model: '🤖',
       file: '📄',
       directory: '📁',
@@ -479,7 +479,7 @@ export class InteractiveRepl {
     const limit = Math.min(completions.length, 12);
 
     for (const c of completions.slice(0, limit)) {
-      const icon = typeIcons[c.type] || '•';
+      const icon = typeIcons[c.type] || '�?;
       const color = typeColors[c.type] || C.primary;
       const text = c.displayText.padEnd(maxLen + 2);
       console.log(`  ${icon} ${color(text)}${C.dim(c.description)}`);
@@ -514,8 +514,8 @@ export class InteractiveRepl {
 
   /**
    * Expand @path references in user input.
-   * @src/App.tsx → inlines file content
-   * @src/components/ → inlines directory listing + all files under 50KB total
+   * @src/App.tsx �?inlines file content
+   * @src/components/ �?inlines directory listing + all files under 50KB total
    */
   private async expandAtReferences(input: string): Promise<string> {
     // Match @word/path.ext or @path patterns (not email addresses)
@@ -568,22 +568,22 @@ export class InteractiveRepl {
           }
 
           injections.push(content);
-          console.log(C.info(`  @ ${refPath} → directory (${files.length} files)`));
+          console.log(C.info(`  @ ${refPath} �?directory (${files.length} files)`));
         } else {
           // Single file
           const size = stat.size;
           if (size > 200 * 1024) {
             injections.push(`[@ ${refPath}: file too large (${(size / 1024).toFixed(0)} KB), please be more specific]`);
-            console.log(C.warning(`  @ ${refPath} → too large (${(size / 1024).toFixed(0)} KB)`));
+            console.log(C.warning(`  @ ${refPath} �?too large (${(size / 1024).toFixed(0)} KB)`));
             continue;
           }
           const ext = path.extname(refPath).slice(1);
           const fileContent = fs.readFileSync(absPath, 'utf-8');
           injections.push(`\n\`\`\`${ext}\n# ${refPath}\n${fileContent}\n\`\`\`\n`);
-          console.log(C.info(`  @ ${refPath} → ${(size / 1024).toFixed(1)} KB`));
+          console.log(C.info(`  @ ${refPath} �?${(size / 1024).toFixed(1)} KB`));
         }
       } catch (err) {
-        injections.push(`[@ ${refPath}: error reading file — ${(err as Error).message}]`);
+        injections.push(`[@ ${refPath}: error reading file �?${(err as Error).message}]`);
       }
     }
 
@@ -640,7 +640,7 @@ export class InteractiveRepl {
       return C.dim('  ' + BOX.arrowDown + ' ');
     }
 
-    // Compact prompt: [MODE] model ›
+    // Compact prompt: [MODE] model �?
     const modeBadge = modeInfo.color(`[${modeInfo.label}]`);
     const modelPart = C.muted(modelShort);
     return `\n${modeBadge} ${modelPart} ${C.brand(BOX.arrowRight)} `;
@@ -763,14 +763,14 @@ export class InteractiveRepl {
     console.log(vl + line2 + ' '.repeat(Math.max(0, w - 24)) + vl);
 
     // Status line 3: MCP
-    let mcpStatus = C.dim('○');
+    let mcpStatus = C.dim('�?);
     let mcpText = 'none';
     if (this.mcpManager) {
       const statuses = this.mcpManager.listServers();
       if (statuses.length > 0) {
         const connected = statuses.filter((s) => s.connected).length;
         const total = statuses.length;
-        mcpStatus = connected === total ? C.success(BOX.check) : connected > 0 ? C.warning('◐') : C.error(BOX.crossX);
+        mcpStatus = connected === total ? C.success(BOX.check) : connected > 0 ? C.warning('�?) : C.error(BOX.crossX);
         mcpText = `${connected}/${total}`;
       }
     }
@@ -867,10 +867,10 @@ export class InteractiveRepl {
           const duration = ((Date.now() - startTime) / 1000).toFixed(2);
           if (code === 0) {
             console.log('');
-            console.log(C.success(`  ✓ exit 0`) + C.dim(` (${duration}s)`));
+            console.log(C.success(`  �?exit 0`) + C.dim(` (${duration}s)`));
           } else {
             console.log('');
-            console.log(C.error(`  ✗ exit ${code}`) + C.dim(` (${duration}s)`));
+            console.log(C.error(`  �?exit ${code}`) + C.dim(` (${duration}s)`));
           }
           resolve();
         });
@@ -922,7 +922,7 @@ export class InteractiveRepl {
     if (this._pendingSkillInject) {
       const skillName = this._pendingSkillInject.metadata.name;
       skillPrefix = `[SKILL: ${skillName}]\n${this._pendingSkillInject.content}\n[/SKILL]\n\n`;
-      console.log(C.info(`  ⚡ Skill "${skillName}" injected`));
+      console.log(C.info(`  �?Skill "${skillName}" injected`));
       this._pendingSkillInject = null;
     }
     const fullInput = [modePrefix, skillPrefix, expandedInput].filter(Boolean).join('\n\n');
@@ -1007,7 +1007,7 @@ export class InteractiveRepl {
 
         onTurnStart: (turn) => {
           this.currentTurn = turn;
-          this.startSpinner(`turn ${turn} — thinking...`);
+          this.startSpinner(`turn ${turn} �?thinking...`);
         },
 
         onTurnEnd: () => {
@@ -1015,7 +1015,7 @@ export class InteractiveRepl {
         },
 
         onContextCompress: (orig, result, action) => {
-          console.log(C.muted(`\n  ${BOX.arrow} context compressed: ${orig} → ${result} tokens (${action})`));
+          console.log(C.muted(`\n  ${BOX.arrow} context compressed: ${orig} �?${result} tokens (${action})`));
         },
       });
 
@@ -1180,8 +1180,8 @@ export class InteractiveRepl {
       // Detect priority from task text (high/medium/low keywords)
       const detectPriority = (text: string): 'high' | 'medium' | 'low' | undefined => {
         if (/high|critical|urgent|重要/i.test(text)) return 'high';
-        if (/low|minor|minor|低/i.test(text)) return 'low';
-        if (/medium|normal|中/i.test(text)) return 'medium';
+        if (/low|minor|minor|�?i.test(text)) return 'low';
+        if (/medium|normal|�?i.test(text)) return 'medium';
         return undefined;
       };
 
@@ -1226,7 +1226,7 @@ export class InteractiveRepl {
   private renderProgressBar(pct: number, width: number): string {
     const filled = Math.round((pct / 100) * width);
     const empty = width - filled;
-    const bar = C.success('█'.repeat(filled)) + C.dim('░'.repeat(empty));
+    const bar = C.success('�?.repeat(filled)) + C.dim('�?.repeat(empty));
     return C.muted('[') + bar + C.muted(']') + C.muted(` ${pct}%`);
   }
 
@@ -1293,7 +1293,7 @@ export class InteractiveRepl {
         if (arg && MODES.includes(arg as InteractionMode)) {
           this.mode = arg as InteractionMode;
           const info = MODE_LABELS[this.mode];
-          console.log(C.muted('  Mode: ') + info.color(info.label) + C.muted(` — ${info.description}`));
+          console.log(C.muted('  Mode: ') + info.color(info.label) + C.muted(` �?${info.description}`));
           console.log(C.muted(`  Approval: `) + C.info(info.approvalMode));
         } else {
           this.cycleMode();
@@ -1401,7 +1401,7 @@ export class InteractiveRepl {
   }
 
   // ========================================================================
-  // /model <id> — switch model at runtime (with interactive selector)
+  // /model <id> �?switch model at runtime (with interactive selector)
   // ========================================================================
 
   private async handleModelCommand(arg: string): Promise<void> {
@@ -1412,7 +1412,7 @@ export class InteractiveRepl {
     }
     try {
       this.modelClient.updateOptions({ model: arg });
-      console.log(C.success(`  ✓ Switched to model: `) + C.primary(arg));
+      console.log(C.success(`  �?Switched to model: `) + C.primary(arg));
       
       // Save to global config
       const config = this.configManager.getConfig();
@@ -1544,9 +1544,9 @@ export class InteractiveRepl {
       // Print header
       console.log('');
       console.log(C.brand(`  ╭──────────────────────────────────────────────────────────╮`));
-      console.log(C.brand(`  │ `) + C.primary('Model Selector').padEnd(56) + C.brand(`│`));
-      console.log(C.brand(`  │ `) + C.dim(`Current: ${currentModel}`).padEnd(56) + C.brand(`│`));
-      console.log(C.brand(`  │ `) + C.muted(`↑↓ Navigate | Enter Select | Esc Cancel`).padEnd(56) + C.brand(`│`));
+      console.log(C.brand(`  �?`) + C.primary('Model Selector').padEnd(56) + C.brand(`│`));
+      console.log(C.brand(`  �?`) + C.dim(`Current: ${currentModel}`).padEnd(56) + C.brand(`│`));
+      console.log(C.brand(`  �?`) + C.muted(`↑↓ Navigate | Enter Select | Esc Cancel`).padEnd(56) + C.brand(`│`));
       console.log(C.brand(`  ├──────────────────────────────────────────────────────────┤`));
       
       // Render models
@@ -1556,12 +1556,12 @@ export class InteractiveRepl {
         const isCurrent = m.id === currentModel;
         
         // Configuration status
-        const statusIcon = m.configured ? '✓' : '⚠';
+        const statusIcon = m.configured ? '�? : '�?;
         const statusColor = m.configured ? C.success : C.warning;
         const statusText = m.configured ? '' : C.warning(' [needs setup]');
         
         // Selection indicator
-        const prefix = isSelected ? C.brand('→ ') : '  ';
+        const prefix = isSelected ? C.brand('�?') : '  ';
         
         // Format line
         let modelDisplay = m.name;
@@ -1573,7 +1573,7 @@ export class InteractiveRepl {
           modelDisplay = C.muted(m.name) + C.dim(` (${m.id})`);
         }
         
-        console.log(C.brand(`  │ `) + prefix + statusColor(statusIcon) + ' ' + modelDisplay + statusText + C.brand(`│`));
+        console.log(C.brand(`  �?`) + prefix + statusColor(statusIcon) + ' ' + modelDisplay + statusText + C.brand(`│`));
       }
       
       // Print footer
@@ -1641,9 +1641,9 @@ export class InteractiveRepl {
                 if (apiKey) {
                   await this.authManager.setCredentials({ provider: providerName, apiKey });
                   console.log('');
-                  console.log(C.success(`  ✓ Configuration saved. Switching to ${selected.name}...`));
+                  console.log(C.success(`  �?Configuration saved. Switching to ${selected.name}...`));
                 } else {
-                  console.log(C.error('  ✗ Configuration cancelled or failed.'));
+                  console.log(C.error('  �?Configuration cancelled or failed.'));
                   return;
                 }
               } else if (selected.id === currentModel) {
@@ -1653,7 +1653,7 @@ export class InteractiveRepl {
               
               // Switch model
               this.modelClient.updateOptions({ model: selected.id });
-              console.log(C.success(`  ✓ Switched to: `) + C.primary(selected.id));
+              console.log(C.success(`  �?Switched to: `) + C.primary(selected.id));
               
               // Save to global config
               const config = this.configManager.getConfig();
@@ -1698,7 +1698,7 @@ export class InteractiveRepl {
   }
 
   // ========================================================================
-  // /init — generate NOVA.md project memory file
+  // /init �?generate NOVA.md project memory file
   // ========================================================================
 
   private async handleInitCommand(arg: string): Promise<void> {
@@ -1720,7 +1720,7 @@ export class InteractiveRepl {
     const content = this.generateNovaMd(scanResult, targetDir);
 
     fs.writeFileSync(novaFile, content, 'utf-8');
-    console.log(C.success(`  ✓ NOVA.md created at ${novaFile}`));
+    console.log(C.success(`  �?NOVA.md created at ${novaFile}`));
     console.log(C.muted(`  This file helps the AI understand your project.`));
     console.log(C.muted(`  Edit it to add custom instructions and context.`));
     console.log('');
@@ -1809,7 +1809,7 @@ export class InteractiveRepl {
     const deps = (scan.dependencies as string[] | undefined) || [];
     const devDeps = (scan.devDependencies as string[] | undefined) || [];
 
-    return `# NOVA.md — Project Memory
+    return `# NOVA.md �?Project Memory
 
 > Auto-generated on ${date}. Edit this file to customize AI behavior for this project.
 
@@ -1857,7 +1857,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
 ## File Reference
 
 <!-- Add paths to key files the AI should know about -->
-<!-- Example: @src/types/index.ts — Core type definitions -->
+<!-- Example: @src/types/index.ts �?Core type definitions -->
 
 ---
 *Edit this file to add project-specific context. The AI reads NOVA.md automatically at the start of each session.*
@@ -1865,7 +1865,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
   }
 
   // ========================================================================
-  // /memory — manage persistent notes
+  // /memory �?manage persistent notes
   // ========================================================================
 
   private get memoryFile(): string {
@@ -1908,7 +1908,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       } else {
         fs.appendFileSync(this.memoryFile, entry, 'utf-8');
       }
-      console.log(C.success(`  ✓ Memory saved: "${text}"`));
+      console.log(C.success(`  �?Memory saved: "${text}"`));
       return;
     }
 
@@ -1939,7 +1939,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
   }
 
   // ========================================================================
-  // /history — browse and restore previous sessions
+  // /history �?browse and restore previous sessions
   // ========================================================================
 
   private async handleHistoryCommand(arg: string): Promise<void> {
@@ -1962,15 +1962,15 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
         const tokens = (s.totalInputTokens + s.totalOutputTokens).toLocaleString();
         const title = (s.title || 'New session').slice(0, 50);
         const isCurrent = this.sessionId && s.id === String(this.sessionId);
-        const marker = isCurrent ? C.success(' ← current') : '';
+        const marker = isCurrent ? C.success(' �?current') : '';
         console.log(
           `  ${C.muted(String(idx + 1).padStart(2) + '.')} ${C.primary(title)}${marker}\n` +
           `      ${C.dim(id + '  ' + date + '  ' + turns + ' turns  ' + tokens + ' tok')}`
         );
       });
       console.log('');
-      console.log(C.dim('  /history restore <n>  — switch to session n'));
-      console.log(C.dim('  /history delete <n>   — delete session n'));
+      console.log(C.dim('  /history restore <n>  �?switch to session n'));
+      console.log(C.dim('  /history delete <n>   �?delete session n'));
       return;
     }
 
@@ -1989,7 +1989,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       if (restored) {
         this.sessionId = restored.id;
         const msgs = this.sessionManager.getMessages(this.sessionId);
-        console.log(C.success(`  ✓ Restored session ${target.id.slice(0, 8)} — ${msgs.length} messages`));
+        console.log(C.success(`  �?Restored session ${target.id.slice(0, 8)} �?${msgs.length} messages`));
         console.log(C.muted(`  Title: "${target.title}"`));
       } else {
         console.log(C.error('  Failed to restore session.'));
@@ -2007,7 +2007,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       const target = sessions[n - 1];
       const deleted = this.sessionManager.deletePersisted(target.id);
       if (deleted) {
-        console.log(C.success(`  ✓ Deleted session ${target.id.slice(0, 8)}`));
+        console.log(C.success(`  �?Deleted session ${target.id.slice(0, 8)}`));
       } else {
         console.log(C.error('  Failed to delete session.'));
       }
@@ -2018,7 +2018,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
   }
 
   // ========================================================================
-  // /compress — manually trigger context compression
+  // /compress �?manually trigger context compression
   // ========================================================================
 
   private async handleCompressCommand(): Promise<void> {
@@ -2031,7 +2031,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
     console.log(C.info(`  Compressing context (${before} messages)...`));
     // Trigger via a lightweight session flush
     this.sessionManager.persist(this.sessionId);
-    console.log(C.success(`  ✓ Context snapshot saved. Session: ${String(this.sessionId).slice(0, 8)}`));
+    console.log(C.success(`  �?Context snapshot saved. Session: ${String(this.sessionId).slice(0, 8)}`));
   }
 
   private printHelp(): void {
@@ -2072,10 +2072,10 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
     // Mode
     const currentMode = MODE_LABELS[this.mode].label;
     console.log(section(`Mode ${C.dim('(current: ' + currentMode + ')')}`));
-    console.log(`${vl}  ${C.info('/mode'.padEnd(18))} ${C.muted('Cycle:')} ${C.success('AUTO')} ${C.dim('→')} ${C.warning('PLAN')} ${C.dim('→')} ${C.info('ASK')}${' '.repeat(w - 46)}${vl}`);
-    console.log(`${vl}  ${C.info('/mode auto'.padEnd(18))} ${C.success('AUTO')} ${C.dim('— full autonomous, no approval')}${' '.repeat(w - 49)}${vl}`);
-    console.log(`${vl}  ${C.info('/mode plan'.padEnd(18))} ${C.warning('PLAN')} ${C.dim('— confirm before each tool')}${' '.repeat(w - 47)}${vl}`);
-    console.log(`${vl}  ${C.info('/mode ask'.padEnd(18))} ${C.info('ASK')}  ${C.dim('— read-only, answer only')}${' '.repeat(w - 45)}${vl}`);
+    console.log(`${vl}  ${C.info('/mode'.padEnd(18))} ${C.muted('Cycle:')} ${C.success('AUTO')} ${C.dim('�?)} ${C.warning('PLAN')} ${C.dim('�?)} ${C.info('ASK')}${' '.repeat(w - 46)}${vl}`);
+    console.log(`${vl}  ${C.info('/mode auto'.padEnd(18))} ${C.success('AUTO')} ${C.dim('�?full autonomous, no approval')}${' '.repeat(w - 49)}${vl}`);
+    console.log(`${vl}  ${C.info('/mode plan'.padEnd(18))} ${C.warning('PLAN')} ${C.dim('�?confirm before each tool')}${' '.repeat(w - 47)}${vl}`);
+    console.log(`${vl}  ${C.info('/mode ask'.padEnd(18))} ${C.info('ASK')}  ${C.dim('�?read-only, answer only')}${' '.repeat(w - 45)}${vl}`);
 
     // Memory
     console.log(section('Memory'));
@@ -2198,7 +2198,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       if (skills.length === 0) {
         console.log(C.muted('  No skills found.'));
         console.log(C.muted('  Add SKILL.md files to ~/.nova/skills/ to create skills.'));
-        console.log(C.dim('  /skills install superpowers  — install popular skills'));
+        console.log(C.dim('  /skills install superpowers  �?install popular skills'));
         return;
       }
       console.log('');
@@ -2212,9 +2212,9 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       }
       console.log('');
       console.log(C.muted(`  ${skills.length} skill${skills.length !== 1 ? 's' : ''} available`));
-      console.log(C.dim('  /skills use <name>   — inject skill into next message'));
-      console.log(C.dim('  /skills info <name>  — show skill details'));
-      console.log(C.dim('  /skills install <repo> — install from GitHub'));
+      console.log(C.dim('  /skills use <name>   �?inject skill into next message'));
+      console.log(C.dim('  /skills info <name>  �?show skill details'));
+      console.log(C.dim('  /skills install <repo> �?install from GitHub'));
       return;
     }
 
@@ -2255,7 +2255,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
   }
 
   // ========================================================================
-  // /skills install — Install skills from GitHub
+  // /skills install �?Install skills from GitHub
   // ========================================================================
 
   private async handleSkillsInstall(repoArg?: string): Promise<void> {
@@ -2266,8 +2266,8 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       console.log(C.muted('  Install skills from GitHub repositories.'));
       console.log('');
       console.log(C.info('  Popular repositories:'));
-      console.log(C.dim('  • superpowers  — Agentic skills (TDD, debugging, review)'));
-      console.log(C.dim('  • owner/repo   — Any GitHub repository'));
+      console.log(C.dim('  �?superpowers  �?Agentic skills (TDD, debugging, review)'));
+      console.log(C.dim('  �?owner/repo   �?Any GitHub repository'));
       console.log('');
       console.log(C.dim('  Usage:'));
       console.log(C.primary('  /skills install superpowers'));
@@ -2277,7 +2277,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
     }
 
     // Import installer
-    const { SkillInstaller, POPULAR_SKILL_REPOS } = await import('../../../core/src/extensions/SkillInstaller.js');
+    const { SkillInstaller, POPULAR_SKILL_REPOS } = await import('../../../packages/core/src/extensions/SkillInstaller.js');
     const installer = new SkillInstaller();
 
     // Resolve shorthand
@@ -2296,9 +2296,9 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       }
 
       console.log('');
-      console.log(C.success(`  ✓ Installed ${installed.length} skill${installed.length !== 1 ? 's' : ''}:`));
+      console.log(C.success(`  �?Installed ${installed.length} skill${installed.length !== 1 ? 's' : ''}:`));
       for (const skill of installed) {
-        console.log(C.primary(`    • ${skill.name}`));
+        console.log(C.primary(`    �?${skill.name}`));
       }
       console.log('');
       console.log(C.dim('  Reload skills with: /skills list'));
@@ -2316,7 +2316,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
   }
 
   // ========================================================================
-  // /theme — Switch color theme
+  // /theme �?Switch color theme
   // ========================================================================
 
   private async handleThemeCommand(arg: string): Promise<void> {
@@ -2366,11 +2366,11 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       console.log(C.dim('  ' + BOX.h.repeat(58)));
       Object.keys(themes).forEach((name) => {
         const isCurrent = name === 'dark'; // Default theme
-        const marker = isCurrent ? C.success('●') : C.dim('○');
+        const marker = isCurrent ? C.success('�?) : C.dim('�?);
         console.log(`  ${marker} ${C.primary(name.padEnd(12))} ${C.dim(name === 'dark' ? '(default)' : '')}`);
       });
       console.log('');
-      console.log(C.dim('  /theme <name>  — switch theme'));
+      console.log(C.dim('  /theme <name>  �?switch theme'));
       return;
     }
 
@@ -2386,12 +2386,12 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
     // 2. Update the C color object dynamically
     // 3. Redraw the UI with new colors
     
-    console.log(C.success(`  ✓ Theme switched to: ${themeName}`));
+    console.log(C.success(`  �?Theme switched to: ${themeName}`));
     console.log(C.muted('  Note: Theme will be fully applied after restart'));
   }
 
   // ========================================================================
-  // /image — Add image to conversation
+  // /image �?Add image to conversation
   // ========================================================================
 
   private async handleImageCommand(arg: string): Promise<void> {
@@ -2470,7 +2470,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
         imageContent,
       ]);
 
-      console.log(C.success(`  ✓ Image added to conversation`));
+      console.log(C.success(`  �?Image added to conversation`));
       console.log(C.muted(`  Path: ${imagePath}`));
       console.log(C.muted(`  Size: ${(imageData.length / 1024).toFixed(1)} KB`));
       console.log(C.muted(`  Type: ${mediaType}`));
@@ -2482,11 +2482,11 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
   }
 
   // ========================================================================
-  // /checkpoint — File snapshot and rollback management
+  // /checkpoint �?File snapshot and rollback management
   // ========================================================================
 
   private async handleCheckpointCommand(arg: string): Promise<void> {
-    const { CheckpointManager } = await import('../../../core/src/utils/CheckpointManager.js');
+    const { CheckpointManager } = await import('../../../packages/core/src/utils/CheckpointManager.js');
     const manager = new CheckpointManager(this.cwd, this.config);
     
     const parts = arg.split(/\s+/).filter(Boolean);
@@ -2517,11 +2517,11 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       }
       
       console.log('');
-      console.log(C.dim('  /checkpoint create <name> [pattern]  — create snapshot'));
-      console.log(C.dim('  /checkpoint restore <id>             — restore snapshot'));
-      console.log(C.dim('  /checkpoint diff <id>                — show differences'));
-      console.log(C.dim('  /checkpoint delete <id>              — delete snapshot'));
-      console.log(C.dim('  /checkpoint stats                    — show statistics'));
+      console.log(C.dim('  /checkpoint create <name> [pattern]  �?create snapshot'));
+      console.log(C.dim('  /checkpoint restore <id>             �?restore snapshot'));
+      console.log(C.dim('  /checkpoint diff <id>                �?show differences'));
+      console.log(C.dim('  /checkpoint delete <id>              �?delete snapshot'));
+      console.log(C.dim('  /checkpoint stats                    �?show statistics'));
       return;
     }
 
@@ -2545,7 +2545,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       
       try {
         const checkpoint = await manager.create(name, [pattern], `Created via CLI`);
-        console.log(C.success(`  ✓ Checkpoint created: ${checkpoint.id.slice(0, 8)}`));
+        console.log(C.success(`  �?Checkpoint created: ${checkpoint.id.slice(0, 8)}`));
         console.log(C.muted(`  Files: ${checkpoint.files.length}`));
       } catch (err) {
         console.log(C.error(`  Failed to create checkpoint: ${err}`));
@@ -2566,7 +2566,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
         return;
       }
 
-      console.log(C.warning(`  ⚠ This will overwrite current files with checkpoint version`));
+      console.log(C.warning(`  �?This will overwrite current files with checkpoint version`));
       console.log(C.muted(`  Checkpoint: ${checkpoint.name}`));
       console.log(C.muted(`  Files: ${checkpoint.files.length}`));
       console.log(C.muted(`  Created: ${new Date(checkpoint.timestamp).toLocaleString()}`));
@@ -2583,7 +2583,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
 
       try {
         await manager.restore(checkpointId);
-        console.log(C.success(`  ✓ Checkpoint restored successfully`));
+        console.log(C.success(`  �?Checkpoint restored successfully`));
       } catch (err) {
         console.log(C.error(`  Failed to restore checkpoint: ${err}`));
       }
@@ -2608,7 +2608,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
         console.log(C.dim('  ' + BOX.h.repeat(58)));
         
         for (const diff of differences) {
-          const icon = diff.status === 'modified' ? '◉' : diff.status === 'deleted' ? '✗' : '✚';
+          const icon = diff.status === 'modified' ? '�? : diff.status === 'deleted' ? '�? : '�?;
           const color = diff.status === 'modified' ? chalk.yellow : diff.status === 'deleted' ? chalk.red : chalk.green;
           console.log(`  ${color(icon)} ${diff.path} ${chalk.dim(`(${diff.status})`)}`);
         }
@@ -2630,7 +2630,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
         return;
       }
 
-      console.log(C.warning(`  ⚠ Delete checkpoint "${checkpoint.name}"?`));
+      console.log(C.warning(`  �?Delete checkpoint "${checkpoint.name}"?`));
       
       const { ConfirmDialog } = await import('../ui/components/ConfirmDialog.js');
       const dialog = new ConfirmDialog();
@@ -2643,7 +2643,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
 
       const success = await manager.delete(subArg);
       if (success) {
-        console.log(C.success(`  ✓ Checkpoint deleted`));
+        console.log(C.success(`  �?Checkpoint deleted`));
       } else {
         console.log(C.error(`  Failed to delete checkpoint`));
       }
@@ -2679,7 +2679,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
   }
 
   // ========================================================================
-  // /ollama — Ollama status and model management
+  // /ollama �?Ollama status and model management
   // ========================================================================
 
   private async handleOllamaCommand(subcommand?: string): Promise<void> {
@@ -2789,7 +2789,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       try {
         // Just switch to the model instead of running interactively
         this.modelClient.updateOptions({ model: arg });
-        console.log(C.success(`  ✓ Switched to Ollama model: ${arg}`));
+        console.log(C.success(`  �?Switched to Ollama model: ${arg}`));
         // Save to config
         const config = this.configManager.getConfig();
         config.core.defaultModel = arg;
@@ -2804,9 +2804,9 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
     console.log(C.warning(`  Unknown subcommand: ${cmd}`));
     console.log('');
     console.log(C.muted('  Usage: /ollama [status|list|pull <model>]'));
-    console.log(C.dim('    /ollama           — show status and installed models'));
-    console.log(C.dim('    /ollama list      — list all installed models'));
-    console.log(C.dim('    /ollama pull <n>  — download a model'));
+    console.log(C.dim('    /ollama           �?show status and installed models'));
+    console.log(C.dim('    /ollama list      �?list all installed models'));
+    console.log(C.dim('    /ollama pull <n>  �?download a model'));
   }
 
   // ========================================================================
@@ -2824,7 +2824,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
 
     return new Promise((resolve) => {
       console.log('');
-      console.log(C.warning.bold('  ⚠ Approval Required'));
+      console.log(C.warning.bold('  �?Approval Required'));
       console.log(C.muted('  Tool:  ') + C.toolName(request.toolName));
       console.log(C.muted('  Risk:  ') + (
         request.risk === 'critical' ? C.error(request.risk) :

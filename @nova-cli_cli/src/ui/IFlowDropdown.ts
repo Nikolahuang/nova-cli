@@ -3,7 +3,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import type { SessionInfo } from '../../../core/src/types/config.js';
+import type { SessionInfo } from '../../../packages/core/src/types/config.js';
 
 export interface DropdownItem {
   id: string;
@@ -81,7 +81,7 @@ export class IFlowDropdown {
         label: 'Quit',
         description: 'Exit Nova CLI (session auto-saved)',
         category: 'navigation',
-        icon: '✗',
+        icon: '�?,
         shortcut: '/exit'
       },
       {
@@ -89,7 +89,7 @@ export class IFlowDropdown {
         label: 'Clear',
         description: 'Clear conversation and start new session',
         category: 'navigation',
-        icon: '🗑️',
+        icon: '🗑�?,
         shortcut: '/reset'
       },
 
@@ -113,7 +113,7 @@ export class IFlowDropdown {
         label: 'Compress',
         description: 'Optimize context window size',
         category: 'session',
-        icon: '⚡'
+        icon: '�?
       },
 
       // Model commands
@@ -159,7 +159,7 @@ export class IFlowDropdown {
         label: 'Ask',
         description: 'Switch to ASK mode (read-only questions)',
         category: 'session',
-        icon: '❓'
+        icon: '�?
       },
 
       // Tool commands
@@ -168,7 +168,7 @@ export class IFlowDropdown {
         label: 'Tools',
         description: 'Manage built-in tools and capabilities',
         category: 'tools',
-        icon: '🛠️'
+        icon: '🛠�?
       },
       {
         id: 'skills',
@@ -279,14 +279,14 @@ export class IFlowDropdown {
 
     // Header
     const width = Math.min(process.stdout.columns || 80, 70);
-    const border = '━'.repeat(width);
+    const border = '�?.repeat(width);
     const title = ' NOVA CLI COMMAND SUGGESTIONS ';
-    const header = `╭${border}╮\n│${title.padEnd(width)}│\n├${'─'.repeat(width)}┤`;
+    const header = `�?{border}╮\n�?{title.padEnd(width)}│\n�?{'─'.repeat(width)}┤`;
 
     console.log(chalk.bgBlue.black(header));
-    console.log(chalk.blue(`│ Use ↑↓ to navigate, Enter to select, Esc to cancel${' '.repeat(width - 64)}│`));
-    console.log(chalk.blue(`│ Input: ${chalk.cyan(input)}${' '.repeat(width - 18 - input.length)}│`));
-    console.log(chalk.blue(`├${'─'.repeat(width)}┤`));
+    console.log(chalk.blue(`�?Use ↑↓ to navigate, Enter to select, Esc to cancel${' '.repeat(width - 64)}│`));
+    console.log(chalk.blue(`�?Input: ${chalk.cyan(input)}${' '.repeat(width - 18 - input.length)}│`));
+    console.log(chalk.blue(`�?{'─'.repeat(width)}┤`));
 
     // Items
     const displayCount = Math.min(
@@ -299,7 +299,7 @@ export class IFlowDropdown {
       const isSelected = i === this.selectedIndex;
 
       // Selection indicator
-      const prefix = isSelected ? chalk.green('▶ ') : chalk.gray('  ');
+      const prefix = isSelected ? chalk.green('�?') : chalk.gray('  ');
       const indent = isSelected ? ' ' : '·';
 
       // Icon
@@ -326,11 +326,11 @@ export class IFlowDropdown {
       }
 
       const line = `${prefix}${indent}${iconDisplay} ${labelDisplay} ${descDisplay}${shortcutDisplay}`;
-      console.log(chalk.blue(`│${line.padEnd(width)}│`));
+      console.log(chalk.blue(`�?{line.padEnd(width)}│`));
     }
 
     // Footer
-    const footer = `╰${'━'.repeat(width)}╯`;
+    const footer = `�?{'�?.repeat(width)}╯`;
     console.log(chalk.blue(footer));
     console.log('');
   }
@@ -376,7 +376,7 @@ export class IFlowDropdown {
 
             const selected = this.filteredItems[this.selectedIndex];
             if (selected) {
-              console.log(chalk.green(`✓ Executing: ${selected.label}`));
+              console.log(chalk.green(`�?Executing: ${selected.label}`));
               setTimeout(() => {
                 if (selected.action) {
                   selected.action();

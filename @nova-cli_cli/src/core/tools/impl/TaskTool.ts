@@ -159,7 +159,7 @@ ${finalResponse}
 
 ---
 
-**Status**: âœ… Completed successfully
+**Status**: âœ?Completed successfully
   `.trim();
 
   return { content: output };

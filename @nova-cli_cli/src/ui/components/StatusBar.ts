@@ -3,7 +3,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import type { SessionInfo, NovaConfig } from '../../../../core/src/types/config.js';
+import type { SessionInfo, NovaConfig } from '../../../../packages/core/src/types/config.js';
 
 export interface StatusBarOptions {
   showTokens?: boolean;
@@ -52,15 +52,15 @@ export class StatusBar {
     const session = this.session!;
     const config = this.config!;
 
-    // [NOVA] model â€¢ turns â€¢ tokens â€¢ mode
+    // [NOVA] model â€?turns â€?tokens â€?mode
     const modelShort = session.model.split('/').pop() || session.model;
     const turnCount = session.turnCount || 0;
     const tokenCount = session.totalInputTokens + session.totalOutputTokens;
 
     return chalk.dim(
-      `[${chalk.bold('NOVA')}] ${chalk.cyan(modelShort)} â€¢ ` +
-      `${chalk.yellow(turnCount)} turns â€¢ ` +
-      `${chalk.green(tokenCount.toLocaleString())} tok â€¢ ` +
+      `[${chalk.bold('NOVA')}] ${chalk.cyan(modelShort)} â€?` +
+      `${chalk.yellow(turnCount)} turns â€?` +
+      `${chalk.green(tokenCount.toLocaleString())} tok â€?` +
       `${chalk[session.mode === 'auto' ? 'green' : session.mode === 'plan' ? 'yellow' : 'blue'](session.mode.toUpperCase())}`
     );
   }

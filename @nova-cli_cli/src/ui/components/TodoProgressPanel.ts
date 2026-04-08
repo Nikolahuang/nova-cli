@@ -67,13 +67,13 @@ const C = {
 // ============================================================================
 
 const BOX = {
-  tl: '‚ï≠', tr: '‚ïÆ', bl: '‚ï∞', br: '‚ïØ',
-  h: '‚îÄ', v: '‚îÇ',
-  ht: '‚îú', htr: '‚î§', cross: '‚îº',
-  check: '‚úì', crossX: '‚úó', dot: '¬∑',
-  diamond: '‚óÜ', star: '‚òÖ', circle: '‚óã', circleFull: '‚óè',
-  arrowRight: '‚Üí', arrowDown: '‚Üì',
-  spinner: ['‚†ã', '‚†ô', '‚†π', '‚†∏', '‚†º', '‚†¥', '‚†¶', '‚†ß', '‚†á', '‚†è'],
+  tl: '‚ï?, tr: '‚ï?, bl: '‚ï?, br: '‚ï?,
+  h: '‚îÄ', v: '‚î?,
+  ht: '‚î?, htr: '‚î?, cross: '‚î?,
+  check: '‚ú?, crossX: '‚ú?, dot: '¬∑',
+  diamond: '‚ó?, star: '‚ò?, circle: '‚ó?, circleFull: '‚ó?,
+  arrowRight: '‚Ü?, arrowDown: '‚Ü?,
+  spinner: ['‚†?, '‚†?, '‚†?, '‚†?, '‚†?, '‚†?, '‚†?, '‚†?, '‚†?, '‚†?],
 };
 
 // ============================================================================
@@ -240,15 +240,15 @@ export class TodoProgressPanel {
   private renderTaskLine(todo: TodoItem, width: number): string {
     const statusIcons = {
       pending: C.dim(BOX.circle + ' '),
-      in_progress: C.warning(C.brand('‚óâ ')),
+      in_progress: C.warning(C.brand('‚ó?')),
       completed: C.success(BOX.check + ' '),
       failed: C.error(BOX.crossX + ' '),
     };
 
     const priorityIndicators = {
-      high: C.error('‚óè'),
-      medium: C.warning('‚óè'),
-      low: C.dim('‚óã'),
+      high: C.error('‚ó?),
+      medium: C.warning('‚ó?),
+      low: C.dim('‚ó?),
     };
 
     const icon = statusIcons[todo.status];
@@ -301,7 +301,7 @@ export class TodoProgressPanel {
   private renderMiniProgressBar(pct: number, width: number): string {
     const filled = Math.round((pct / 100) * width);
     const empty = width - filled;
-    return C.muted('[') + C.success('‚ñà'.repeat(filled)) + C.dim('‚ñë'.repeat(empty)) + C.muted(']') + C.muted(` ${pct}%`);
+    return C.muted('[') + C.success('‚ñ?.repeat(filled)) + C.dim('‚ñ?.repeat(empty)) + C.muted(']') + C.muted(` ${pct}%`);
   }
 
   // ========================================================================

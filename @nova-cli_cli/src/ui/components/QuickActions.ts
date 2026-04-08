@@ -3,7 +3,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import type { SessionInfo } from '../../../../core/src/types/config.js';
+import type { SessionInfo } from '../../../../packages/core/src/types/config.js';
 
 export interface QuickAction {
   key: string;

@@ -114,7 +114,7 @@ export class ModelValidator {
 
     try {
       // Get all providers from config
-      const { ConfigManager } = await import('../../../core/src/config/ConfigManager.js');
+      const { ConfigManager } = await import('../../../packages/core/src/config/ConfigManager.js');
       const configManager = new ConfigManager();
       await configManager.load();
       providers = Object.keys(configManager.getConfig().models.providers);

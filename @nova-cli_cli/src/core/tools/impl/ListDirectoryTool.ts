@@ -93,10 +93,10 @@ export const listDirectoryHandler: ToolHandler = async (input: ToolHandlerInput)
     if (truncated) {
       content += `\n\n[TRUNCATED: Showing ${entries.length} of ${totalFound} items.]`;
       content += `\n[To see more, use one of these approaches:]`;
-      content += `\n  â€¢ Use pattern filter: list_directory with pattern="*.ts"`;
-      content += `\n  â€¢ Increase limit: list_directory with limit=1000`;
-      content += `\n  â€¢ Use non-recursive: list_directory with recursive=false`;
-      content += `\n  â€¢ Search specific files: search_file with pattern="**/*.ts"`;
+      content += `\n  â€?Use pattern filter: list_directory with pattern="*.ts"`;
+      content += `\n  â€?Increase limit: list_directory with limit=1000`;
+      content += `\n  â€?Use non-recursive: list_directory with recursive=false`;
+      content += `\n  â€?Search specific files: search_file with pattern="**/*.ts"`;
     } else {
       content += `\n\n${entries.length} item(s): ${fileCount} file(s), ${dirCount} director${dirCount === 1 ? 'y' : 'ies'}`;
     }

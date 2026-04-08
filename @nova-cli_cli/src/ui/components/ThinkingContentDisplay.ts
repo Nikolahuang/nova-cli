@@ -38,16 +38,16 @@ const C = {
 // ============================================================================
 
 const DASHED = {
-  h: 'â•Œ',      // Dashed horizontal
-  v: 'â•Ž',      // Dashed vertical
-  tl: 'â”Œ',     // Top-left (solid for corners)
-  tr: 'â”',     // Top-right
-  bl: 'â””',     // Bottom-left
-  br: 'â”˜',     // Bottom-right
-  hDash: 'â•Œ',  // Dashed horizontal
-  vDash: 'â•Ž',  // Dashed vertical
-  bullet: 'â€¢',
-  arrow: 'â†’',
+  h: 'â•?,      // Dashed horizontal
+  v: 'â•?,      // Dashed vertical
+  tl: 'â”?,     // Top-left (solid for corners)
+  tr: 'â”?,     // Top-right
+  bl: 'â”?,     // Bottom-left
+  br: 'â”?,     // Bottom-right
+  hDash: 'â•?,  // Dashed horizontal
+  vDash: 'â•?,  // Dashed vertical
+  bullet: 'â€?,
+  arrow: 'â†?,
 };
 
 // ============================================================================
@@ -140,12 +140,12 @@ export class ThinkingContentDisplay {
     
     // Header
     console.log('');
-    console.log(C.border('â”Œ' + DASHED.h.repeat(width - 2) + 'â”'));
+    console.log(C.border('â”? + DASHED.h.repeat(width - 2) + 'â”?));
     
-    const headerText = ` ðŸ’­ æ€è€ƒè¿‡ç¨‹ ${C.muted(`(${duration}s)`)} `;
+    const headerText = ` ðŸ’­ æ€è€ƒè¿‡ç¨?${C.muted(`(${duration}s)`)} `;
     const headerPadding = width - 2 - this.stripAnsi(headerText).length;
-    console.log(C.border('â•Ž') + C.thinking.bold(headerText) + ' '.repeat(Math.max(0, headerPadding)) + C.border('â•Ž'));
-    console.log(C.border('â”œ' + DASHED.h.repeat(width - 2) + 'â”¤'));
+    console.log(C.border('â•?) + C.thinking.bold(headerText) + ' '.repeat(Math.max(0, headerPadding)) + C.border('â•?));
+    console.log(C.border('â”? + DASHED.h.repeat(width - 2) + 'â”?));
 
     // Content lines
     const displayLines = this.options.expanded 
@@ -157,10 +157,10 @@ export class ThinkingContentDisplay {
       for (const wrapped of wrappedLines) {
         const padding = width - 4 - this.stripAnsi(wrapped).length;
         console.log(
-          C.borderDim('â•Ž') + ' ' + 
+          C.borderDim('â•?) + ' ' + 
           C.textDim(wrapped) + 
           ' '.repeat(Math.max(0, padding)) + ' ' + 
-          C.borderDim('â•Ž')
+          C.borderDim('â•?)
         );
       }
     }
@@ -169,11 +169,11 @@ export class ThinkingContentDisplay {
     if (lines.length > displayLines.length) {
       const moreText = `... è¿˜æœ‰ ${lines.length - displayLines.length} è¡Œ`;
       const padding = width - 4 - moreText.length;
-      console.log(C.borderDim('â•Ž') + ' ' + C.muted(moreText) + ' '.repeat(Math.max(0, padding)) + ' ' + C.borderDim('â•Ž'));
+      console.log(C.borderDim('â•?) + ' ' + C.muted(moreText) + ' '.repeat(Math.max(0, padding)) + ' ' + C.borderDim('â•?));
     }
 
     // Footer
-    console.log(C.border('â””' + DASHED.h.repeat(width - 2) + 'â”˜'));
+    console.log(C.border('â”? + DASHED.h.repeat(width - 2) + 'â”?));
   }
 
   // ========================================================================

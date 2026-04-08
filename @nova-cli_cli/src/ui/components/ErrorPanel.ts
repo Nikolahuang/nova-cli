@@ -3,7 +3,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-// import type { NovaError } from '../../../../../core/src/types/errors.js';
+// import type { NovaError } from '../../../../../packages/core/src/types/errors.js';
 
 export interface ErrorPanelOptions {
   showStack?: boolean;
@@ -163,20 +163,20 @@ export class ErrorPanel {
       console.log(chalk.cyan('Quick commands:'));
       switch (errorInfo.category) {
         case 'auth':
-          console.log(chalk.cyan('  ‚Ä¢ nova auth set <provider>'));
-          console.log(chalk.cyan('  ‚Ä¢ Check environment variables'));
+          console.log(chalk.cyan('  ‚Ä?nova auth set <provider>'));
+          console.log(chalk.cyan('  ‚Ä?Check environment variables'));
           break;
         case 'config':
-          console.log(chalk.cyan('  ‚Ä¢ nova config edit'));
-          console.log(chalk.cyan('  ‚Ä¢ Check ~/.nova/config.yaml'));
+          console.log(chalk.cyan('  ‚Ä?nova config edit'));
+          console.log(chalk.cyan('  ‚Ä?Check ~/.nova/config.yaml'));
           break;
         case 'network':
-          console.log(chalk.cyan('  ‚Ä¢ Check internet connection'));
-          console.log(chalk.cyan('  ‚Ä¢ Try nova ollama status'));
+          console.log(chalk.cyan('  ‚Ä?Check internet connection'));
+          console.log(chalk.cyan('  ‚Ä?Try nova ollama status'));
           break;
         case 'model':
-          console.log(chalk.cyan('  ‚Ä¢ nova model list'));
-          console.log(chalk.cyan('  ‚Ä¢ Check provider configuration'));
+          console.log(chalk.cyan('  ‚Ä?nova model list'));
+          console.log(chalk.cyan('  ‚Ä?Check provider configuration'));
           break;
       }
     }
@@ -203,12 +203,12 @@ export class ErrorPanel {
       network: 'üåê',
       model: 'ü§ñ',
       file: 'üìÅ',
-      execution: '‚ö°',
+      execution: '‚ö?,
       validation: '‚ö†Ô∏è',
       permission: 'üö´',
-      timeout: '‚è∞',
+      timeout: '‚è?,
       quota: 'üí∞',
-      unknown: '‚ùå'
+      unknown: '‚ù?
     };
 
     return icons[category] || icons.unknown;
