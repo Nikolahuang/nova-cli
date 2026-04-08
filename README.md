@@ -2,7 +2,7 @@
 
 > Next-generation CLI agent framework — more efficient, more multimodal, more intelligent.
 
-[![npm version](https://img.shields.io/npm/v/@nova-cli/cli.svg)](https://www.npmjs.com/package/@nova-cli/cli)
+[![npm version](https://img.shields.io/npm/v/@nikolahuang1/nova.svg)](https://www.npmjs.com/package/@nikolahuang1/nova)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Nova CLI is a production-grade terminal AI agent that combines the best ideas from Claude Code, iFlow CLI, and other tools into a unified, extensible framework. It provides a complete conversation loop with tool use, multi-provider LLM support, MCP integration, and a security-first architecture.
@@ -25,7 +25,7 @@ Nova CLI is a production-grade terminal AI agent that combines the best ideas fr
 ### 4. 安装 Nova CLI
 
 ```bash
-npm install -g nova-terminal-ai@latest
+npm install -g @nikolahuang1/nova@latest
 ```
 
 ### 5. 启动 Nova CLI
