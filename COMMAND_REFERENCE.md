@@ -260,7 +260,7 @@ ENV NOVA_LOG_LEVEL=info
 
 COPY . /app
 WORKDIR /app
-RUN npm install -g nova-terminal-ai@latest
+RUN npm install -g iflow4nova@latest
 
 CMD ["nova", "-p", "Hello World"]
 ```

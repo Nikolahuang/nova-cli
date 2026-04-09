@@ -10,24 +10,24 @@ import { spawn, execSync } from 'node:child_process';
 import chalk from 'chalk';
 import React from 'react';
 import { render } from 'ink';
-import type { NovaConfig } from '../../../core/src/types/config.js';
-import type { SessionId, ApprovalRequest, ApprovalResponse } from '../../../core/src/types/session.js';
-import type { McpManager, McpServerStatus } from '../../../core/src/mcp/McpManager.js';
-import type { SkillRegistry, SkillDefinition } from '../../../core/src/extensions/SkillRegistry.js';
-import type { ConfigManager } from '../../../core/src/config/ConfigManager.js';
-import type { AuthManager } from '../../../core/src/auth/AuthManager.js';
-import { AgentLoop } from '../../../core/src/session/AgentLoop.js';
-import { ModelClient } from '../../../core/src/model/ModelClient.js';
-import { SessionManager } from '../../../core/src/session/SessionManager.js';
-import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.js';
-import { ApprovalManager } from '../../../core/src/security/ApprovalManager.js';
-import { buildSystemPrompt } from '../../../core/src/context/defaultSystemPrompt.js';
-import { ThinkingBlockRenderer } from '../ui/components/ThinkingBlockRenderer.js';
-import { TodoProgressPanel, type TodoItem } from '../ui/components/TodoProgressPanel.js';
-import { UserMessageHighlight } from '../ui/components/UserMessageHighlight.js';
-import { ThinkingContentDisplay } from '../ui/components/ThinkingContentDisplay.js';
-import { ToolCallStatusDisplay } from '../ui/components/ToolCallStatusDisplay.js';
-import { selectModelInteractive, selectSkillInteractive } from '../ui/SimpleSelector2.js';
+import type { NovaConfig } from '../../../core/src/types/config.ts';
+import type { SessionId, ApprovalRequest, ApprovalResponse } from '../../../core/src/types/session.ts';
+import type { McpManager, McpServerStatus } from '../../../core/src/mcp/McpManager.ts';
+import type { SkillRegistry, SkillDefinition } from '../../../core/src/extensions/SkillRegistry.ts';
+import type { ConfigManager } from '../../../core/src/config/ConfigManager.ts';
+import type { AuthManager } from '../../../core/src/auth/AuthManager.ts';
+import { AgentLoop } from '../../../core/src/session/AgentLoop.ts';
+import { ModelClient } from '../../../core/src/model/ModelClient.ts';
+import { SessionManager } from '../../../core/src/session/SessionManager.ts';
+import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.ts';
+import { ApprovalManager } from '../../../core/src/security/ApprovalManager.ts';
+import { buildSystemPrompt } from '../../../core/src/context/defaultSystemPrompt.ts';
+import { ThinkingBlockRenderer } from '../ui/components/ThinkingBlockRenderer.ts';
+import { TodoProgressPanel, type TodoItem } from '../ui/components/TodoProgressPanel.ts';
+import { UserMessageHighlight } from '../ui/components/UserMessageHighlight.ts';
+import { ThinkingContentDisplay } from '../ui/components/ThinkingContentDisplay.ts';
+import { ToolCallStatusDisplay } from '../ui/components/ToolCallStatusDisplay.ts';
+import { selectModelInteractive, selectSkillInteractive } from '../ui/SimpleSelector2.ts';
 
 // Import Ink components
 import { 
@@ -43,7 +43,7 @@ import {
   SelectList,
   Toast,
   Colors,
-} from '../ui/components/index.js';
+} from '../ui/components/index.ts';
 
 // ============================================================================
 // Types
@@ -976,18 +976,21 @@ export class InkBasedRepl {
   // ========================================================================
 
   private async handleSkillsServerCommand(): Promise<void> {
-    const { default: fetch } = await import('node-fetch');
     const SKILLS_REPO = 'daymade/claude-code-skills';
-    const API_URL = `https://api.github.com/repos/${SKILLS_REPO}/contents`;
+    
+    // Helper function to fetch skills with optional auth
+    const fetchSkills = async (token?: string): Promise<any> => {
+      const API_URL = `https://api.github.com/repos/${SKILLS_REPO}/contents`;
+      const headers: { [key: string]: string } = {
+        'Accept': 'application/vnd.github.v3+json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
-    console.log('');
-    console.log(chalk.hex('#7C3AED').bold('  Skills Marketplace — GitHub'));
-    console.log(chalk.dim(`  Fetching skills from: github.com/${SKILLS_REPO}`));
-    console.log(chalk.dim('  Connecting...'));
-
-    try {
       const response = await fetch(API_URL, {
-        headers: { 'Accept': 'application/vnd.github.v3+json' },
+        headers,
         timeout: 15000,
       } as any);
 
@@ -999,12 +1002,10 @@ export class InkBasedRepl {
       const folders = contents.filter(c => c.type === 'dir' && !c.name.startsWith('.'));
 
       if (folders.length === 0) {
-        console.log(chalk.yellow('  No skill folders found in repository.'));
-        return;
+        throw new Error('No skill folders found in repository.');
       }
 
       // Fetch each folder's SKILL.md to get description
-      console.log(chalk.dim('  Loading skill descriptions...'));
       const skillsInfo: Array<{ name: string; description: string }> = [];
 
       const batchSize = 5;
@@ -1013,8 +1014,14 @@ export class InkBasedRepl {
         const results = await Promise.allSettled(
           batch.map(async (folder) => {
             const skillUrl = `https://api.github.com/repos/${SKILLS_REPO}/contents/${folder.name}/SKILL.md`;
+            const skillHeaders: { [key: string]: string } = {
+              'Accept': 'application/vnd.github.v3+json'
+            };
+            if (token) {
+              skillHeaders['Authorization'] = `Bearer ${token}`;
+            }
             const resp = await fetch(skillUrl, {
-              headers: { 'Accept': 'application/vnd.github.v3+json' },
+              headers: skillHeaders,
               timeout: 10000,
             } as any);
             if (!resp.ok) return { name: folder.name, description: '' };
@@ -1032,6 +1039,17 @@ export class InkBasedRepl {
         }
       }
 
+      return skillsInfo;
+    };
+
+    console.log('');
+    console.log(chalk.hex('#7C3AED').bold('  Skills Marketplace — GitHub'));
+    console.log(chalk.dim(`  Fetching skills from: github.com/${SKILLS_REPO}`));
+    console.log(chalk.dim('  Connecting...'));
+
+    try {
+      let skillsInfo = await fetchSkills();
+      
       // Display interactive selection
       console.log('');
       console.log(chalk.hex('#7C3AED').bold(`  ${skillsInfo.length} skills available:`));
@@ -1039,7 +1057,7 @@ export class InkBasedRepl {
       console.log('');
 
       const selected = await selectSkillInteractive(
-        skillsInfo.map(s => ({ name: s.name, description: s.description }))
+        skillsInfo.map((s: any) => ({ name: s.name, description: s.description }))
       );
 
       if (!selected) {
@@ -1070,8 +1088,81 @@ export class InkBasedRepl {
         console.log(chalk.yellow('  Installation completed but no skills were installed.'));
       }
     } catch (err) {
-      console.log(chalk.red(`  Failed to fetch skills: ${(err as Error).message}`));
-      console.log(chalk.dim('  Check your internet connection and try again.'));
+      const error = err as Error;
+      if (error.message.includes('403')) {
+        console.log('');
+        console.log(chalk.red('  GitHub API rate limit exceeded or access denied.'));
+        console.log(chalk.yellow('  To continue, you need to provide a GitHub Personal Access Token.'));
+        console.log(chalk.dim('  Get your token at: https://github.com/settings/tokens'));
+        console.log(chalk.dim('  Required scopes: repo (public_repo is sufficient)'));
+        console.log('');
+        
+        const readline = await import('readline');
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+        
+        const token = await new Promise<string>((resolve) => {
+          rl.question(chalk.cyan('  Enter your GitHub token (leave empty to skip): '), (answer) => {
+            rl.close();
+            resolve(answer.trim());
+          });
+        });
+        
+        if (token) {
+          console.log('');
+          console.log(chalk.dim('  Retrying with token...'));
+          try {
+            let skillsInfo = await fetchSkills(token);
+            
+            console.log('');
+            console.log(chalk.hex('#7C3AED').bold(`  ${skillsInfo.length} skills available:`));
+            console.log(chalk.dim('  Use arrow keys to navigate, Enter to install, Esc to cancel'));
+            console.log('');
+
+            const selected = await selectSkillInteractive(
+              skillsInfo.map((s: any) => ({ name: s.name, description: s.description }))
+            );
+
+            if (!selected) {
+              console.log(chalk.dim('  Cancelled.'));
+              return;
+            }
+
+            // Install the selected skill
+            console.log('');
+            console.log(chalk.dim(`  Installing "${selected}" from GitHub...`));
+            const { SkillInstaller } = await import('../../../core/src/extensions/SkillInstaller.js');
+            const installer = new SkillInstaller();
+            const installed = await installer.install({
+              source: `https://github.com/${SKILLS_REPO}`,
+              skills: [selected],
+              force: true,
+            });
+
+            if (installed.length > 0) {
+              console.log(chalk.green(`  ✓ Installed "${selected}" successfully.`));
+              await this.skillRegistry!.initialize();
+              const skill = await this.skillRegistry!.get(selected);
+              if (skill) {
+                this._pendingSkillInject = skill;
+                console.log(chalk.hex('#3B82F6')(`  Skill "${selected}" will be injected into your next message.`));
+              }
+            } else {
+              console.log(chalk.yellow('  Installation completed but no skills were installed.'));
+            }
+          } catch (retryErr) {
+            console.log(chalk.red(`  Failed to fetch skills with token: ${(retryErr as Error).message}`));
+            console.log(chalk.dim('  Please check your token and try again.'));
+          }
+        } else {
+          console.log(chalk.dim('  Skipped. You can use /skills author to install local skills.'));
+        }
+      } else {
+        console.log(chalk.red(`  Failed to fetch skills: ${error.message}`));
+        console.log(chalk.dim('  Check your internet connection and try again.'));
+      }
     }
   }
 

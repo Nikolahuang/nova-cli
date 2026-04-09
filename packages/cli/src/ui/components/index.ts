@@ -15,33 +15,33 @@ export {
   SelectList,
   Toast,
   Colors,
-} from './InkComponents.js';
+} from './InkComponents.ts';
 
-export { NovaInkApp } from './NovaInkApp.js';
-export { InkAppRunner, createInkApp } from './InkAppRunner.js';
-export type { InkAppOptions } from './InkAppRunner.js';
+export { NovaInkApp } from './NovaInkApp.ts';
+export { InkAppRunner, createInkApp } from './InkAppRunner.ts';
+export type { InkAppOptions } from './InkAppRunner.ts';
 
 // Legacy components
-export { ThinkingBlockRenderer } from './ThinkingBlockRenderer.js';
-export { ProgressBar as ProgressBarLegacy } from './ProgressBar.js';
-export { ConfirmDialog as ConfirmDialogLegacy } from './ConfirmDialog.js';
+export { ThinkingBlockRenderer } from './ThinkingBlockRenderer.ts';
+export { ProgressBar as ProgressBarLegacy } from './ProgressBar.ts';
+export { ConfirmDialog as ConfirmDialogLegacy } from './ConfirmDialog.ts';
 
 // New UX enhancement components
-export { TodoProgressPanel, createTodoProgressPanel } from './TodoProgressPanel.js';
-export type { TodoItem, TodoProgressOptions } from './TodoProgressPanel.js';
+export { TodoProgressPanel, createTodoProgressPanel } from './TodoProgressPanel.ts';
+export type { TodoItem, TodoProgressOptions } from './TodoProgressPanel.ts';
 
 export { 
   UserMessageHighlight, 
   createUserMessageHighlight, 
   highlightUserMessage 
-} from './UserMessageHighlight.js';
-export type { UserMessageOptions } from './UserMessageHighlight.js';
+} from './UserMessageHighlight.ts';
+export type { UserMessageOptions } from './UserMessageHighlight.ts';
 
-export { ThinkingContentDisplay, createThinkingContentDisplay } from './ThinkingContentDisplay.js';
-export type { ThinkingDisplayOptions } from './ThinkingContentDisplay.js';
+export { ThinkingContentDisplay, createThinkingContentDisplay } from './ThinkingContentDisplay.ts';
+export type { ThinkingDisplayOptions } from './ThinkingContentDisplay.ts';
 
-export { ToolCallStatusDisplay, createToolCallStatusDisplay } from './ToolCallStatusDisplay.js';
-export type { ToolCallInfo, ToolStatusOptions } from './ToolCallStatusDisplay.js';
+export { ToolCallStatusDisplay, createToolCallStatusDisplay } from './ToolCallStatusDisplay.ts';
+export type { ToolCallInfo, ToolStatusOptions } from './ToolCallStatusDisplay.ts';
 
 export {
   ActiveCursor,
@@ -52,4 +52,4 @@ export {
   RainbowCursor,
   createRainbowCursor,
   type CursorOptions,
-} from './ActiveCursor.js';
+} from './ActiveCursor.ts';

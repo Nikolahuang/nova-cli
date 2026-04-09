@@ -3,7 +3,7 @@
 // Provides visual polish without changing functionality
 // ============================================================================
 
-import { Theme, getTheme } from './theme-config.js';
+import { Theme, getTheme } from './theme-config.ts';
 
 // ============================================================================
 // Visual Enhancement Types

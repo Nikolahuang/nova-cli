@@ -20,22 +20,22 @@ try {
   const packageJsonPath = path.resolve(__dirname, '../../../../../package.json');
   packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
 }
-import { ConfigManager } from '../../../core/src/config/ConfigManager.js';
-import { AuthManager } from '../../../core/src/auth/AuthManager.js';
-import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.js';
-import { SessionManager } from '../../../core/src/session/SessionManager.js';
-import type { SessionId } from '../../../core/src/types/session.js';
-import type { ModelConfig } from '../../../core/src/types/config.js';
-import { OptimizedAgentLoop } from '../../../core/src/session/OptimizedAgentLoop.js';
-import { ModelClient } from '../../../core/src/model/ModelClient.js';
-import { ModelConnectionTester } from '../../../core/src/model/ModelConnectionTester.js';
-import { McpManager } from '../../../core/src/mcp/McpManager.js';
-import { SkillRegistry } from '../../../core/src/extensions/SkillRegistry.js';
-import { SkillInstaller } from '../../../core/src/extensions/SkillInstaller.js';
-import { OptimizedContextCompressor } from '../../../core/src/context/OptimizedContextCompressor.js';
-import { ApprovalManager } from '../../../core/src/security/ApprovalManager.js';
-import { HookExecutor } from '../../../core/src/security/HookExecutor.js';
-import { NovaError, getErrorMessage } from '../../../core/src/types/errors.js';
+import { ConfigManager } from '../../../core/src/config/ConfigManager.ts';
+import { AuthManager } from '../../../core/src/auth/AuthManager.ts';
+import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.ts';
+import { SessionManager } from '../../../core/src/session/SessionManager.ts';
+import type { SessionId } from '../../../core/src/types/session.ts';
+import type { ModelConfig } from '../../../core/src/types/config.ts';
+import { OptimizedAgentLoop } from '../../../core/src/session/OptimizedAgentLoop.ts';
+import { ModelClient } from '../../../core/src/model/ModelClient.ts';
+import { ModelConnectionTester } from '../../../core/src/model/ModelConnectionTester.ts';
+import { McpManager } from '../../../core/src/mcp/McpManager.ts';
+import { SkillRegistry } from '../../../core/src/extensions/SkillRegistry.ts';
+import { SkillInstaller } from '../../../core/src/extensions/SkillInstaller.ts';
+import { OptimizedContextCompressor } from '../../../core/src/context/OptimizedContextCompressor.ts';
+import { ApprovalManager } from '../../../core/src/security/ApprovalManager.ts';
+import { HookExecutor } from '../../../core/src/security/HookExecutor.ts';
+import { NovaError, getErrorMessage } from '../../../core/src/types/errors.ts';
 import {
   readFileHandler,
   writeFileHandler,
@@ -57,7 +57,7 @@ import {
   multieditHandler,
   truncateHandler,
   questionHandler,
-} from '../../../core/src/tools/impl/index.js';
+} from '../../../core/src/tools/impl/index.ts';
 import {
   readFileSchema,
   writeFileSchema,
@@ -78,13 +78,13 @@ import {
   multieditSchema,
   truncateSchema,
   questionSchema,
-} from '../../../core/src/tools/schemas/index.js';
-import type { NovaConfig } from '../../../core/src/types/config.js';
-import { OllamaManager } from '../../../core/src/model/providers/OllamaManager.js';
-import { ModelValidator } from '../../../core/src/model/ModelValidator.js';
-import { parseCliArgs } from './parseArgs.js';
-import { InteractiveRepl } from './InteractiveRepl.js';
-import { InkBasedRepl } from './InkBasedRepl.js';
+} from '../../../core/src/tools/schemas/index.ts';
+import type { NovaConfig } from '../../../core/src/types/config.ts';
+import { OllamaManager } from '../../../core/src/model/providers/OllamaManager.ts';
+import { ModelValidator } from '../../../core/src/model/ModelValidator.ts';
+import { parseCliArgs } from './parseArgs.ts';
+import { InteractiveRepl } from './InteractiveRepl.ts';
+import { InkBasedRepl } from './InkBasedRepl.ts';
 
 /** Providers that require an API key */
 const REQUIRES_API_KEY = new Set(['anthropic', 'openai', 'azure', 'google', 'deepseek',

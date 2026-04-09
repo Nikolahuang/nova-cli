@@ -1,6 +1,6 @@
 {
   "name": "iflow4nova",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Next-generation CLI agent framework - efficient, multimodal, intelligent",
   "engines": {
     "bun": ">=1.0.0",

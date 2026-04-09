@@ -5,7 +5,7 @@ Next-generation AI-powered terminal assistant.
 ## Installation
 
 ```bash
-npm install -g nova-terminal-ai@latest
+npm install -g iflow4nova@latest
 ```
 
 ## Quick Start

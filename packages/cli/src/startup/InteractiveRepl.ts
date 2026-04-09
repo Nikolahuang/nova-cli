@@ -10,25 +10,25 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { execSync, spawn } from 'node:child_process';
 import chalk from 'chalk';
-import { getTheme } from '../ui/themes/theme-config.js';
-import type { NovaConfig } from '../../../core/src/types/config.js';
-import type { SessionId, ApprovalRequest, ApprovalResponse } from '../../../core/src/types/session.js';
-import { OptimizedAgentLoop } from '../../../core/src/session/OptimizedAgentLoop.js';
-import { ModelClient } from '../../../core/src/model/ModelClient.js';
-import { SessionManager } from '../../../core/src/session/SessionManager.js';
-import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.js';
-import { ApprovalManager } from '../../../core/src/security/ApprovalManager.js';
-import { buildSystemPrompt } from '../../../core/src/context/defaultSystemPrompt.js';
-import { ThinkingBlockRenderer } from '../ui/components/ThinkingBlockRenderer.js';
-import { TodoProgressPanel, type TodoItem } from '../ui/components/TodoProgressPanel.js';
-import { UserMessageHighlight } from '../ui/components/UserMessageHighlight.js';
-import type { McpManager, McpServerStatus } from '../../../core/src/mcp/McpManager.js';
-import type { SkillRegistry, SkillDefinition } from '../../../core/src/extensions/SkillRegistry.js';
-import type { ConfigManager } from '../../../core/src/config/ConfigManager.js';
-import type { AuthManager } from '../../../core/src/auth/AuthManager.js';
-import { OllamaManager } from '../../../core/src/model/providers/OllamaManager.js';
-import { CompletionHelper } from '../utils/CompletionHelper.js';
-import { EnhancedCompleter, type CompletionCandidate } from '../utils/EnhancedCompleter.js';
+import { getTheme } from '../ui/themes/theme-config.ts';
+import type { NovaConfig } from '../../../core/src/types/config.ts';
+import type { SessionId, ApprovalRequest, ApprovalResponse } from '../../../core/src/types/session.ts';
+import { OptimizedAgentLoop } from '../../../core/src/session/OptimizedAgentLoop.ts';
+import { ModelClient } from '../../../core/src/model/ModelClient.ts';
+import { SessionManager } from '../../../core/src/session/SessionManager.ts';
+import { ToolRegistry } from '../../../core/src/tools/ToolRegistry.ts';
+import { ApprovalManager } from '../../../core/src/security/ApprovalManager.ts';
+import { buildSystemPrompt } from '../../../core/src/context/defaultSystemPrompt.ts';
+import { ThinkingBlockRenderer } from '../ui/components/ThinkingBlockRenderer.ts';
+import { TodoProgressPanel, type TodoItem } from '../ui/components/TodoProgressPanel.ts';
+import { UserMessageHighlight } from '../ui/components/UserMessageHighlight.ts';
+import type { McpManager, McpServerStatus } from '../../../core/src/mcp/McpManager.ts';
+import type { SkillRegistry, SkillDefinition } from '../../../core/src/extensions/SkillRegistry.ts';
+import type { ConfigManager } from '../../../core/src/config/ConfigManager.ts';
+import type { AuthManager } from '../../../core/src/auth/AuthManager.ts';
+import { OllamaManager } from '../../../core/src/model/providers/OllamaManager.ts';
+import { CompletionHelper } from '../utils/CompletionHelper.ts';
+import { EnhancedCompleter, type CompletionCandidate } from '../utils/EnhancedCompleter.ts';
 
 // ============================================================================
 // Types
@@ -2348,17 +2348,20 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
 
   private async handleSkillsServerCommand(): Promise<void> {
     const SKILLS_REPO = 'daymade/claude-code-skills';
-    const API_URL = `https://api.github.com/repos/${SKILLS_REPO}/contents`;
+    
+    // Helper function to fetch skills with optional auth
+    const fetchSkills = async (token?: string): Promise<any> => {
+      const API_URL = `https://api.github.com/repos/${SKILLS_REPO}/contents`;
+      const headers: { [key: string]: string } = {
+        'Accept': 'application/vnd.github.v3+json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
-    console.log('');
-    console.log(C.brand('  Skills Marketplace — GitHub'));
-    console.log(C.dim('  ' + BOX.h.repeat(58)));
-    console.log(C.muted(`  Fetching skills from: github.com/${SKILLS_REPO}`));
-    console.log(C.dim('  Connecting...'));
-
-    try {
       const response = await fetch(API_URL, {
-        headers: { 'Accept': 'application/vnd.github.v3+json' },
+        headers,
         signal: AbortSignal.timeout(15000),
       });
 
@@ -2370,12 +2373,10 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       const folders = contents.filter(c => c.type === 'dir' && !c.name.startsWith('.'));
 
       if (folders.length === 0) {
-        console.log(C.warning('  No skill folders found in repository.'));
-        return;
+        throw new Error('No skill folders found in repository.');
       }
 
       // Fetch each folder's SKILL.md to get description
-      console.log(C.muted('  Loading skill descriptions...'));
       const skillsInfo: Array<{ name: string; description: string }> = [];
       
       // Fetch descriptions in parallel with limit
@@ -2385,8 +2386,14 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
         const results = await Promise.allSettled(
           batch.map(async (folder) => {
             const skillUrl = `https://api.github.com/repos/${SKILLS_REPO}/contents/${folder.name}/SKILL.md`;
+            const skillHeaders: { [key: string]: string } = {
+              'Accept': 'application/vnd.github.v3+json'
+            };
+            if (token) {
+              skillHeaders['Authorization'] = `Bearer ${token}`;
+            }
             const resp = await fetch(skillUrl, {
-              headers: { 'Accept': 'application/vnd.github.v3+json' },
+              headers: skillHeaders,
               signal: AbortSignal.timeout(10000),
             });
             if (!resp.ok) return { name: folder.name, description: '' };
@@ -2405,6 +2412,18 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
         }
       }
 
+      return skillsInfo;
+    };
+
+    console.log('');
+    console.log(C.brand('  Skills Marketplace — GitHub'));
+    console.log(C.dim('  ' + BOX.h.repeat(58)));
+    console.log(C.muted(`  Fetching skills from: github.com/${SKILLS_REPO}`));
+    console.log(C.dim('  Connecting...'));
+
+    try {
+      let skillsInfo = await fetchSkills();
+      
       // Display interactive selection
       console.log('');
       console.log(C.brand(`  ${skillsInfo.length} skills available:`));
@@ -2412,7 +2431,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       console.log('');
 
       const selected = await this.arrowKeySelect(
-        skillsInfo.map(s => ({ name: s.name, desc: s.description })),
+        skillsInfo.map((s: any) => ({ name: s.name, desc: s.description })),
         `Select a skill to install from ${SKILLS_REPO}`
       );
 
@@ -2447,8 +2466,84 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
       }
 
     } catch (err) {
-      console.log(C.error(`  Failed to fetch skills: ${(err as Error).message}`));
-      console.log(C.dim('  Check your internet connection and try again.'));
+      const error = err as Error;
+      if (error.message.includes('403')) {
+        console.log('');
+        console.log(C.error('  GitHub API rate limit exceeded or access denied.'));
+        console.log(C.warning('  To continue, you need to provide a GitHub Personal Access Token.'));
+        console.log(C.muted('  Get your token at: https://github.com/settings/tokens'));
+        console.log(C.muted('  Required scopes: repo (public_repo is sufficient)'));
+        console.log('');
+        
+        const readline = await import('readline');
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+        
+        const token = await new Promise<string>((resolve) => {
+          rl.question(C.cyan('  Enter your GitHub token (leave empty to skip): '), (answer) => {
+            rl.close();
+            resolve(answer.trim());
+          });
+        });
+        
+        if (token) {
+          console.log('');
+          console.log(C.muted('  Retrying with token...'));
+          try {
+            let skillsInfo = await fetchSkills(token);
+            
+            console.log('');
+            console.log(C.brand(`  ${skillsInfo.length} skills available:`));
+            console.log(C.dim('  Use arrow keys to navigate, Enter to install, Esc to cancel'));
+            console.log('');
+
+            const selected = await this.arrowKeySelect(
+              skillsInfo.map((s: any) => ({ name: s.name, desc: s.description })),
+              `Select a skill to install from ${SKILLS_REPO}`
+            );
+
+            if (!selected) {
+              console.log(C.muted('  Cancelled.'));
+              return;
+            }
+
+            // Install the selected skill
+            console.log('');
+            console.log(C.muted(`  Installing "${selected.name}" from GitHub...`));
+            const { SkillInstaller } = await import('../../../core/src/extensions/SkillInstaller.js');
+            const installer = new SkillInstaller();
+            const installed = await installer.install({
+              source: `https://github.com/${SKILLS_REPO}`,
+              skills: [selected.name],
+              force: true,
+            });
+
+            if (installed.length > 0) {
+              console.log(C.success(`  ✓ Installed "${selected.name}" successfully.`));
+              // Reinitialize skill registry
+              await this.skillRegistry!.initialize();
+              // Auto-inject the skill
+              const skill = await this.skillRegistry!.get(selected.name);
+              if (skill) {
+                this._pendingSkillInject = skill;
+                console.log(C.info(`  Skill "${selected.name}" will be injected into your next message.`));
+              }
+            } else {
+              console.log(C.warning('  Installation completed but no skills were installed.'));
+            }
+          } catch (retryErr) {
+            console.log(C.error(`  Failed to fetch skills with token: ${(retryErr as Error).message}`));
+            console.log(C.muted('  Please check your token and try again.'));
+          }
+        } else {
+          console.log(C.muted('  Skipped. You can use /skills author to install local skills.'));
+        }
+      } else {
+        console.log(C.error(`  Failed to fetch skills: ${error.message}`));
+        console.log(C.dim('  Check your internet connection and try again.'));
+      }
     }
   }
 

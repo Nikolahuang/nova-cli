@@ -1,6 +1,6 @@
-import { ContextCompressor } from '../../../core/src/context/ContextCompressor.js';
-import { LayeredMemoryManager } from '../../../core/src/context/LayeredMemoryManager.js';
-import { AgentLoop } from '../../../core/src/session/AgentLoop.js';
+import { ContextCompressor } from '../../../core/src/context/ContextCompressor.ts';
+import { LayeredMemoryManager } from '../../../core/src/context/LayeredMemoryManager.ts';
+import { AgentLoop } from '../../../core/src/session/AgentLoop.ts';
 
 console.log('ContextCompressor:', typeof ContextCompressor);
 console.log('LayeredMemoryManager:', typeof LayeredMemoryManager);

@@ -2,7 +2,7 @@
 // Error Enhancement - 增强的错误提示系统
 // ============================================================================
 
-import { CliUI, Colors, BoxChars } from './CliUI.js';
+import { CliUI, Colors, BoxChars } from './CliUI.ts';
 
 /**
  * 增强的错误类型

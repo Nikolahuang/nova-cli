@@ -3,8 +3,8 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import type { SessionInfo, NovaConfig } from '../../../core/src/types/config.js';
-import { IFlowDropdown } from '../ui/IFlowDropdown.js';
+import type { SessionInfo, NovaConfig } from '../../../core/src/types/config.ts';
+import { IFlowDropdown } from '../ui/IFlowDropdown.ts';
 
 export interface IFlowReplOptions {
   enableDropdown?: boolean;

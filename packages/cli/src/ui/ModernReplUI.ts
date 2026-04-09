@@ -20,12 +20,12 @@ try {
   const packageJsonPath = path.resolve(__dirname, '../../../../package.json');
   packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
 }
-import type { SessionInfo, NovaConfig } from '../../../core/src/types/config.js';
+import type { SessionInfo, NovaConfig } from '../../../core/src/types/config.ts';
 
-import { StatusBar } from './components/StatusBar.js';
-import { ProgressIndicator } from './components/ProgressIndicator.js';
-import { ErrorPanel } from './components/ErrorPanel.js';
-import { QuickActions } from './components/QuickActions.js';
+import { StatusBar } from './components/StatusBar.ts';
+import { ProgressIndicator } from './components/ProgressIndicator.ts';
+import { ErrorPanel } from './components/ErrorPanel.ts';
+import { QuickActions } from './components/QuickActions.ts';
 
 export interface ModernReplOptions {
   showStatusBar?: boolean;

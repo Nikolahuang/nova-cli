@@ -4,7 +4,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import { getTheme } from '../themes/theme-config.js';
+import { getTheme } from '../themes/theme-config.ts';
 
 // ============================================================================
 // Types

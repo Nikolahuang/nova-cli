@@ -1,15 +1,1 @@
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
-    "strict": false,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
-    "noEmit": false,
-    "noEmitOnError": false,
-    "skipLibCheck": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
-}
+{"extends": "../../tsconfig.base.json", "compilerOptions": {"outDir": "dist", "rootDir": "src", "strict": false, "noImplicitAny": false, "strictNullChecks": false, "exactOptionalPropertyTypes": false, "noEmit": false, "noEmitOnError": false, "skipLibCheck": true, "noUnusedLocals": false, "noUnusedParameters": false, "noImplicitReturns": false, "noFallthroughCasesInSwitch": false}, "include": ["src/**/*"], "exclude": ["node_modules", "dist", "**/*.test.ts"]}

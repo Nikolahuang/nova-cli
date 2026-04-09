@@ -2,7 +2,7 @@
 
 > Next-generation CLI agent framework — more efficient, more multimodal, more intelligent.
 
-[![npm version](https://img.shields.io/npm/v/@nikolahuang1/nova.svg)](https://www.npmjs.com/package/@nikolahuang1/nova)
+[![npm version](https://img.shields.io/npm/v/iflow4nova.svg)](https://www.npmjs.com/package/iflow4nova)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Nova CLI is a production-grade terminal AI agent that combines the best ideas from Claude Code, iFlow CLI, and other tools into a unified, extensible framework. It provides a complete conversation loop with tool use, multi-provider LLM support, MCP integration, and a security-first architecture.
@@ -25,7 +25,7 @@ Nova CLI is a production-grade terminal AI agent that combines the best ideas fr
 ### 4. 安装 Nova CLI
 
 ```bash
-npm install -g @nikolahuang1/nova@latest
+npm install -g iflow4nova@latest
 ```
 
 ### 5. 启动 Nova CLI
@@ -33,6 +33,347 @@ npm install -g @nikolahuang1/nova@latest
 ```bash
 nova
 ```
+
+## 常用命令全集
+
+### 基础命令
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `nova` | 启动交互式 REPL | `nova` |
+| `nova -p "提示词"` | 单次提问后退出 | `nova -p "解释这段代码"` |
+| `nova -m 模型名` | 使用指定模型 | `nova -m claude-3-5-sonnet` |
+| `nova -d 目录` | 指定工作目录 | `nova -d /path/to/project` |
+| `nova -c` | 继续最近会话 | `nova -c` |
+| `nova -r` | 恢复历史会话 | `nova -r` |
+
+### 交互式命令
+
+在 REPL 中可用的斜杠命令：
+
+#### 会话管理
+```
+/help              显示帮助信息
+/quit              退出 Nova CLI
+/clear             清空当前会话
+/reset             开始新会话
+/sessions          显示会话统计
+/compact           压缩上下文
+```
+
+#### 模型与配置
+```
+/model <name>      切换模型
+/approval <mode>   更改审批模式 (yolo/default/accepting_edits/plan/smart)
+/config show       显示当前配置
+/project analyze   分析项目结构
+```
+
+#### 技能系统
+```
+/skills            管理技能
+/skills list       列出所有技能
+/skills add local <file>    添加本地技能
+/skills add global <file>   添加全局技能
+/skills rm <name>  删除技能
+/skills author     从 SkillsHub 安装技能
+/skills server     从 GitHub 安装技能
+```
+
+#### 项目分析
+```
+/init              快速分析项目
+/init --deep       深度分析项目
+```
+
+#### 记忆系统
+```
+/memory save <key> <value>   保存记忆
+/memory load <key>            加载记忆
+/memory list                  列出所有记忆
+/memory delete <key>          删除记忆
+```
+
+### 快捷输入方式
+
+#### 文件引用
+```bash
+# 使用 @ 引用文件
+@src/App.tsx
+@package.json
+@docs/README.md
+
+# 同时引用多个文件
+@src/App.tsx @src/utils.ts @package.json
+```
+
+#### Shell 命令
+```bash
+# 使用 ! 执行命令
+!npm install
+!git status
+!python --version
+
+# 命令输出会被捕获并发送给 AI
+```
+
+#### 多行输入
+```bash
+# 输入三个点号开始多行输入
+...
+这是第一行
+这是第二行
+这是第三行
+...
+```
+
+### 审批模式
+
+| 模式 | 行为 | 适用场景 |
+|------|------|----------|
+| `yolo` | 自动批准所有操作 | 快速原型开发、可信环境 |
+| `default` | 只询问高风险操作 | 日常开发 |
+| `accepting_edits` | 自动批准文件编辑 | 需要频繁修改代码 |
+| `plan` | 所有操作前询问 | 谨慎操作、学习模式 |
+| `smart` | AI 辅助决策 | 平衡安全与效率 |
+
+## 使用技巧
+
+### 1. 提高代码质量
+```
+# 使用项目分析功能
+/init
+
+# 然后让 AI 优化代码
+帮我优化这个项目的代码结构和性能
+```
+
+### 2. 快速调试
+```bash
+# 引用文件并询问问题
+@src/utils/errorHandler.ts 为什么这个函数会抛出异常？
+
+# 执行测试并分析结果
+!npm test
+根据测试结果帮我修复问题
+```
+
+### 3. 代码审查
+```bash
+# 引用多个文件进行审查
+@src/components/Header.tsx @src/components/Footer.tsx
+请审查这两个组件的代码质量和潜在问题
+```
+
+### 4. 生成文档
+```bash
+# 基于代码生成文档
+@src/api/
+请为这些 API 文件生成完整的文档
+```
+
+### 5. 重构代码
+```bash
+# 先分析项目
+/init --deep
+
+# 然后进行重构
+请帮我重构这个模块，使其更易于维护
+```
+
+### 6. 学习新技术
+```
+# 让 AI 解释新概念
+请解释 React Hooks 的工作原理，并给出示例
+
+# 让 AI 生成学习路径
+我想学习 TypeScript，请给我一个详细的学习计划
+```
+
+### 7. 自动化任务
+```bash
+# 创建自动化脚本
+请创建一个脚本来自动运行测试并生成报告
+
+# 设置 Git hooks
+请帮我设置 pre-commit hook 来运行代码检查
+```
+
+## 实战案例
+
+### 案例 1: 创建新项目
+```bash
+# 1. 启动 Nova
+nova
+
+# 2. 让 AI 创建项目
+请帮我创建一个 React + TypeScript 项目，包含以下功能：
+- 用户认证
+- 路由管理
+- 状态管理
+- API 集成
+
+# 3. AI 会自动创建文件和配置
+```
+
+### 案例 2: 修复 Bug
+```bash
+# 1. 引用有问题的文件
+@src/components/UserList.tsx
+
+# 2. 描述问题
+这个组件在渲染大量数据时会卡顿，请优化性能
+
+# 3. AI 会分析并修复
+```
+
+### 案例 3: 添加新功能
+```bash
+# 1. 引用相关文件
+@src/App.tsx @src/api/user.ts
+
+# 2. 描述需求
+请在用户列表中添加搜索和筛选功能
+
+# 3. AI 会实现新功能
+```
+
+### 案例 4: 代码重构
+```bash
+# 1. 先分析项目
+/init
+
+# 2. 提出重构需求
+请将这个项目从 JavaScript 迁移到 TypeScript
+
+# 3. AI 会逐步迁移代码
+```
+
+### 案例 5: 性能优化
+```bash
+# 1. 运行性能分析
+!npm run build
+
+# 2. 让 AI 分析结果
+根据构建结果，帮我优化项目性能
+
+# 3. AI 会提供优化建议
+```
+
+## 高级技巧
+
+### 1. 使用自定义技能
+```bash
+# 创建技能文件
+# my-skill.md
+---
+name: code-reviewer
+description: 专业代码审查技能
+---
+
+你是一个专业的代码审查员，请关注：
+- 代码质量和可读性
+- 潜在的安全问题
+- 性能优化机会
+- 最佳实践建议
+
+# 添加技能
+/skills add local my-skill.md
+
+# 使用技能
+请审查这段代码
+```
+
+### 2. 配置 MCP 服务器
+```bash
+# 配置文件位置
+~/.nova/config.yaml
+
+# 添加 MCP 服务器
+mcp:
+  servers:
+    - name: my-server
+      command: node
+      args: ["path/to/server.js"]
+```
+
+### 3. 使用本地模型
+```bash
+# 启动 Ollama
+ollama serve
+
+# 使用本地模型
+nova -m ollama/llama3.2
+
+# 查看可用模型
+nova ollama list
+```
+
+### 4. 配置国内平台
+```bash
+# 配置阿里云百炼
+nova coding-plan add alibaba --key <api-key>
+
+# 配置智谱 AI
+nova coding-plan add zhipu --key <api-key>
+
+# 配置腾讯云
+nova coding-plan add tencent --key <api-key>
+```
+
+### 5. 使用 Git 集成
+```bash
+# 查看 Git 状态
+!git status
+
+# 提交代码
+!git add .
+!git commit -m "feat: add new feature"
+
+# 让 AI 生成提交信息
+!git diff
+请根据这些更改生成合适的 commit message
+```
+
+## 故障排除
+
+### 问题 1: 找不到 nova 命令
+```bash
+# 检查安装
+npm list -g iflow4nova
+
+# 重新安装
+npm install -g iflow4nova@latest
+```
+
+### 问题 2: API 连接失败
+```bash
+# 检查认证状态
+nova auth status
+
+# 重新配置
+nova auth set anthropic
+```
+
+### 问题 3: GitHub 速率限制
+```bash
+# 配置 GitHub Token
+export GITHUB_TOKEN=your_token_here
+
+# 或在交互模式中输入 token
+/skills server
+# 系统会提示输入 token
+```
+
+## 最佳实践
+
+1. **定期使用 /init** - 保持 AI 对项目的最新理解
+2. **使用 @ 引用文件** - 减少手动输入，提高准确性
+3. **设置合适的审批模式** - 根据场景选择 yolo/default/plan
+4. **利用技能系统** - 为特定任务创建专用技能
+5. **保持对话简洁** - 分步骤描述复杂任务
+6. **保存有用的记忆** - 使用 /memory save 保存重要信息
+7. **善用项目分析** - 使用 /init 快速了解项目结构
 
 ## 配置 API Key
 

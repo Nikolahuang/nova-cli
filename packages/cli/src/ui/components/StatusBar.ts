@@ -3,7 +3,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import type { SessionInfo, NovaConfig } from '../../../../core/src/types/config.js';
+import type { SessionInfo, NovaConfig } from '../../../../core/src/types/config.ts';
 
 export interface StatusBarOptions {
   showTokens?: boolean;

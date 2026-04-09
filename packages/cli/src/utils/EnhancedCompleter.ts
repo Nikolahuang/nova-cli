@@ -5,7 +5,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { ConfigManager } from '../../../core/src/config/ConfigManager.js';
+import type { ConfigManager } from '../../../core/src/config/ConfigManager.ts';
 
 export interface CompletionCandidate {
   text: string;

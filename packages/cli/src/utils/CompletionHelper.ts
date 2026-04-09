@@ -2,7 +2,7 @@
 // Completion Helper - 命令自动补全助手
 // ============================================================================
 
-import { CliUI, Colors } from './CliUI.js';
+import { CliUI, Colors } from './CliUI.ts';
 
 /**
  * 补全项

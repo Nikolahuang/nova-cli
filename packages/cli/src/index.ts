@@ -2,4 +2,4 @@
 // Nova CLI - Main CLI application entry point
 // ============================================================================
 
-export { NovaApp } from './startup/NovaApp.js';
+export { NovaApp } from './startup/NovaApp.ts';

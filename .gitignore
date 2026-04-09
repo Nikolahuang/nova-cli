@@ -76,6 +76,29 @@ read_pdf.mjs
 read_pdf.py
 pdf_content.txt
 
+# Backup directories
+backup-scripts/
+backup-archive/
+
+# Temporary scripts
+fix-*.js
+fix-*.ps1
+
+# Session and progress files
+*-session.md
+*-SUMMARY.md
+*-NOTES*.md
+
+# Test and publish scripts
+test-*.bat
+publish-*.bat
+comprehensive-test.js
+project-status-report.js
+
+# Published packages
+iflow4nova-*.tgz
+*.tgz
+
 # Research & Documentation (archive)
 research_project/
 civil-engineering-cloud-claude-code-source-*/

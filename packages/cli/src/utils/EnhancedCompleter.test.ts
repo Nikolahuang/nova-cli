@@ -3,8 +3,8 @@
 // ============================================================================
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { EnhancedCompleter } from './EnhancedCompleter.js';
-import type { ConfigManager } from '../../../core/src/config/ConfigManager.js';
+import { EnhancedCompleter } from './EnhancedCompleter.ts';
+import type { ConfigManager } from '../../../core/src/config/ConfigManager.ts';
 
 // Mock ConfigManager
 function createMockConfigManager(): ConfigManager {

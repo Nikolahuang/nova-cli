@@ -3,7 +3,7 @@
 // Provides enhanced visual aesthetics while maintaining all functionality
 // ============================================================================
 
-export { Theme, themes, defaultTheme, getTheme, getGradientColors, supportsColor } from './theme-config.js';
+export { Theme, themes, defaultTheme, getTheme, getGradientColors, supportsColor } from './theme-config.ts';
 export {
   getBorderCharacters,
   createSeparator,
@@ -20,11 +20,11 @@ export {
   getContrastColor,
   createDecorativeHeader,
   createDecorativeFooter,
-} from './style-utils.js';
+} from './style-utils.ts';
 
 // Re-export types for convenience
-export type { ThemeColors, ThemeStyles, ThemeAnimations, StyleOptions, BorderStyle, HighlightStyle } from './theme-config.js';
-export type { StyleOptions as StyleOptionsType, BorderStyle as BorderStyleType, HighlightStyle as HighlightStyleType } from './style-utils.js';
+export type { ThemeColors, ThemeStyles, ThemeAnimations, StyleOptions, BorderStyle, HighlightStyle } from './theme-config.ts';
+export type { StyleOptions as StyleOptionsType, BorderStyle as BorderStyleType, HighlightStyle as HighlightStyleType } from './style-utils.ts';
 
 // ============================================================================
 // Theme Configuration Options

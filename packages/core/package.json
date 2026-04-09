@@ -1,14 +1,22 @@
 {
-  "name": "nova-ai-engine",
-  "version": "0.3.1",
+  "name": "iflow4nova-core",
+  "version": "0.3.3",
   "description": "Nova CLI core engine - agent loop, tools, session management",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./src/*": {
+      "types": "./src/*.ts",
+      "import": "./src/*.ts"
+    },
+    "./dist/*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
     }
   },
   "files": [

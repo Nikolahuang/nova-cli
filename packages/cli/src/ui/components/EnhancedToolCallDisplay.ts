@@ -4,7 +4,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import { createEnhancedBorder } from '../themes/claude-code-enhancements.js';
+import { createEnhancedBorder } from '../themes/claude-code-enhancements.ts';
 
 // ============================================================================
 // Types

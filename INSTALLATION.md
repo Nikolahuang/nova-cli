@@ -27,7 +27,7 @@ Nova CLI 是一个强大的 AI 编程助手命令行工具，支持多种 AI 模
 #### 4. 安装 Nova CLI
 
 ```bash
-npm install -g @nikolahuang1/nova@latest
+npm install -g iflow4nova@latest
 ```
 
 #### 5. 启动 Nova CLI
@@ -151,7 +151,7 @@ nova skills install https://gitee.com/anderson2/superpowers.git
 
 ```bash
 # 卸载 npm 包
-npm uninstall -g @nikolahuang1/nova
+npm uninstall -g iflow4nova
 
 # (可选) 清理用户配置和缓存
 # Windows PowerShell:

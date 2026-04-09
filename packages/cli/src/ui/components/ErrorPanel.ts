@@ -3,7 +3,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-// import type { NovaError } from '../../../../../core/src/types/errors.js';
+// import type { NovaError } from '../../../../../core/src/types/errors.ts';
 
 export interface ErrorPanelOptions {
   showStack?: boolean;

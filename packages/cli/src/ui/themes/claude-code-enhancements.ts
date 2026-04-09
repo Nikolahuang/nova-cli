@@ -5,7 +5,7 @@
 // ============================================================================
 
 import chalk from 'chalk';
-import { getTheme } from './theme-config.js';
+import { getTheme } from './theme-config.ts';
 
 // ============================================================================
 // Enhanced Color Palette
