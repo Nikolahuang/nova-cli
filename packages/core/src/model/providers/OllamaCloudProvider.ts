@@ -451,7 +451,7 @@ export class OllamaCloudProvider implements ModelProvider {
         'Authorization': `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(120000),
+      signal: AbortSignal.timeout(300000), // 5 minutes timeout for large file operations
     });
   }
 }

@@ -22,6 +22,11 @@ export const readFileSchema = {
       description: 'File encoding (default: utf-8)',
       default: 'utf-8',
     },
+    timeout: {
+      type: 'number',
+      description: 'Timeout in milliseconds (default: 30000)',
+      default: 30000,
+    },
     allowExternalAccess: {
       type: 'boolean',
       description: 'Allow reading files outside the working directory (default: false for security)',
@@ -57,6 +62,11 @@ export const writeFileSchema = {
       type: 'string',
       description: 'File encoding (default: utf-8)',
       default: 'utf-8',
+    },
+    timeout: {
+      type: 'number',
+      description: 'Timeout in milliseconds (default: 60000 for large files)',
+      default: 60000,
     },
     allowExternalAccess: {
       type: 'boolean',
@@ -97,6 +107,11 @@ export const editFileSchema = {
       type: 'boolean',
       description: 'Preview the change without modifying the file',
       default: false,
+    },
+    timeout: {
+      type: 'number',
+      description: 'Timeout in milliseconds (default: 30000)',
+      default: 30000,
     },
     allowExternalAccess: {
       type: 'boolean',
@@ -142,6 +157,11 @@ export const listDirectorySchema = {
       type: 'number',
       description: 'Maximum number of entries to return (default: 500). Use smaller values for faster results.',
       default: 500,
+    },
+    timeout: {
+      type: 'number',
+      description: 'Timeout in milliseconds (default: 15000)',
+      default: 15000,
     },
     allowExternalAccess: {
       type: 'boolean',
