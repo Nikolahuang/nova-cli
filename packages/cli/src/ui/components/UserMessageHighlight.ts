@@ -117,37 +117,14 @@ export class UserMessageHighlight {
       ? time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
       : '';
 
-    // Enhanced header with modern icons and design
-    const headerIcon = BOX.sparkles;
-    const headerLabel = ` ${headerIcon} 您的消息 `;
-    const headerContent = style.accent.bold(headerLabel) + (timeStr ? style.borderDim(` ${timeStr}`) : '');
-    const headerPadding = width - this.stripAnsi(headerContent).length - 2;
-    
+    // Clear any existing input line to prevent duplicate display
+    process.stdout.write('\r\x1b[K');
+    process.stdout.write('\r\x1b[1A'); // Move cursor up one line to clear previous input
+    process.stdout.write('\x1b[K'); // Clear the line we moved to
+
+    // User message with blue bold text (user requested style)
     console.log('');
-    // Top border with accent
-    console.log(style.border(BOX.tl) + style.border(BOX.hThick.repeat(3)) + style.border(BOX.h.repeat(width - 6)) + style.border(BOX.hThick.repeat(3)) + style.border(BOX.tr));
-    // Header line
-    console.log(style.border(BOX.v) + ' ' + headerContent + ' '.repeat(Math.max(0, headerPadding)) + ' ' + style.border(BOX.v));
-    // Divider
-    console.log(style.borderDim(BOX.vc) + style.borderDim(BOX.h.repeat(width)) + style.borderDim(BOX.vcB));
-
-    // Message content with enhanced formatting
-    const lines = this.wrapText(message, width - 4);
-    for (const line of lines) {
-      const linePadding = width - 4 - this.stripAnsi(line).length;
-      // Add subtle indentation for better readability
-      console.log(
-        style.border(BOX.v) + '   ' + 
-        style.accent(line) + 
-        ' '.repeat(Math.max(0, linePadding)) + '   ' + 
-        style.border(BOX.v)
-      );
-    }
-
-    // Enhanced footer with modern design
-    console.log(style.borderDim(BOX.vc) + style.borderDim(BOX.h.repeat(width)) + style.borderDim(BOX.vcB));
-    // Bottom border with accent
-    console.log(style.border(BOX.bl) + style.border(BOX.hThick.repeat(3)) + style.border(BOX.h.repeat(width - 6)) + style.border(BOX.hThick.repeat(3)) + style.border(BOX.br));
+    console.log(chalk.hex('#3B82F6').bold(message));
     console.log('');
   }
 
