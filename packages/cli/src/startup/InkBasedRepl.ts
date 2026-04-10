@@ -1822,6 +1822,9 @@ export class InkBasedRepl {
     // Expand @file references
     const expandedInput = await this.expandAtReferences(input);
 
+    // Clear the original input line (readline already displayed it in white)
+    process.stdout.write('\r\x1b[K');
+
     // Show user message with highlighted box (distinctive from AI responses)
     this.userMessageHighlight.render(input);
 

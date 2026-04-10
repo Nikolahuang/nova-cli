@@ -143,7 +143,7 @@ export class ThinkingContentDisplay {
     console.log(C.border('┌' + DASHED.h.repeat(width - 2) + '┐'));
     
     const headerText = ` 💭 思考过程 ${C.muted(`(${duration}s)`)} `;
-    const headerPadding = width - 2 - this.stripAnsi(headerText).length;
+    const headerPadding = width - 2 - this.getStrippedWidth(headerText);
     console.log(C.border('╎') + C.thinking.bold(headerText) + ' '.repeat(Math.max(0, headerPadding)) + C.border('╎'));
     console.log(C.border('├' + DASHED.h.repeat(width - 2) + '┤'));
 
@@ -155,7 +155,7 @@ export class ThinkingContentDisplay {
     for (const line of displayLines) {
       const wrappedLines = this.wrapLine(line, width - 4);
       for (const wrapped of wrappedLines) {
-        const padding = width - 4 - this.stripAnsi(wrapped).length;
+        const padding = width - 4 - this.getStrippedWidth(wrapped);
         console.log(
           C.borderDim('╎') + ' ' + 
           C.textDim(wrapped) + 
@@ -168,7 +168,7 @@ export class ThinkingContentDisplay {
     // Show truncation indicator if needed
     if (lines.length > displayLines.length) {
       const moreText = `... 还有 ${lines.length - displayLines.length} 行`;
-      const padding = width - 4 - moreText.length;
+      const padding = width - 4 - this.getStrippedWidth(moreText);
       console.log(C.borderDim('╎') + ' ' + C.muted(moreText) + ' '.repeat(Math.max(0, padding)) + ' ' + C.borderDim('╎'));
     }
 
@@ -181,7 +181,7 @@ export class ThinkingContentDisplay {
   // ========================================================================
 
   /**
-   * Strip ANSI escape codes from string
+   * Strip ANSI escape codes from string and return the cleaned string
    */
   private stripAnsi(str: string): string {
     // eslint-disable-next-line no-control-regex
@@ -189,15 +189,76 @@ export class ThinkingContentDisplay {
   }
 
   /**
-   * Wrap a line to fit within the specified width
+   * Get the display width of a string with ANSI codes removed
+   */
+  private getStrippedWidth(str: string): number {
+    const stripped = this.stripAnsi(str);
+    return this.getDisplayWidth(stripped);
+  }
+
+  /**
+   * Calculate the display width of a string (accounting for full-width characters)
+   */
+  private getDisplayWidth(str: string): number {
+    let width = 0;
+    for (const char of str) {
+      // Check if character is full-width (Chinese, Japanese, Korean, etc.)
+      if (this.isFullWidthChar(char)) {
+        width += 2;
+      } else {
+        width += 1;
+      }
+    }
+    return width;
+  }
+
+  /**
+   * Check if a character is full-width
+   */
+  private isFullWidthChar(char: string): boolean {
+    const code = char.charCodeAt(0);
+    // Chinese, Japanese, Korean, and other full-width characters
+    return (
+      (code >= 0x4E00 && code <= 0x9FFF) || // CJK Unified Ideographs
+      (code >= 0x3400 && code <= 0x4DBF) || // CJK Extension A
+      (code >= 0x20000 && code <= 0x2A6DF) || // CJK Extension B
+      (code >= 0x2A700 && code <= 0x2B73F) || // CJK Extension C
+      (code >= 0x2B740 && code <= 0x2B81F) || // CJK Extension D
+      (code >= 0x2B820 && code <= 0x2CEAF) || // CJK Extension E
+      (code >= 0xF900 && code <= 0xFAFF) || // CJK Compatibility Ideographs
+      (code >= 0x2F800 && code <= 0x2FA1F) || // CJK Compatibility Ideographs Supplement
+      (code >= 0x3000 && code <= 0x303F) || // CJK Symbols and Punctuation
+      (code >= 0xFF00 && code <= 0xFFEF) // Half-width and Full-width Forms
+    );
+  }
+
+  /**
+   * Wrap a line to fit within the specified width (accounting for full-width characters)
    */
   private wrapLine(line: string, width: number): string[] {
-    if (line.length <= width) return [line];
+    if (this.getDisplayWidth(line) <= width) return [line];
     
     const result: string[] = [];
-    for (let i = 0; i < line.length; i += width) {
-      result.push(line.slice(i, i + width));
+    let currentLine = '';
+    let currentWidth = 0;
+    
+    for (const char of line) {
+      const charWidth = this.isFullWidthChar(char) ? 2 : 1;
+      
+      if (currentWidth + charWidth > width) {
+        result.push(currentLine);
+        currentLine = char;
+        currentWidth = charWidth;
+      } else {
+        currentLine += char;
+        currentWidth += charWidth;
+      }
     }
+    
+    if (currentLine) {
+      result.push(currentLine);
+    }
+    
     return result;
   }
 }
