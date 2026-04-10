@@ -2703,8 +2703,8 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
     // Ask scope: Global (G) or Local session (L)
     console.log('');
     console.log(C.muted('  Install scope:'));
-    console.log(C.info('    G') + C.muted(' — Global (available in all sessions)'));
-    console.log(C.info('    L') + C.muted(' — Current session only'));
+    console.log(C.info('    G') + C.muted(' — Global (永久保存，所有会话可用)'));
+    console.log(C.info('    L') + C.muted(' — Session (仅当前会话使用)'));
     console.log('');
 
     const scope = await this.promptInput('  Scope (G/L): ');
@@ -2731,11 +2731,38 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
         if (!isGlobal) {
           // For session-only, just inject the skill content
           const content = fs.readFileSync(path.join(installed[0].path, 'SKILL.md'), 'utf-8');
-          const { SkillValidator } = await import('../../../core/src/extensions/SkillValidator.js');
-          const validator = new SkillValidator();
-          const parsed = validator.parse(content);
-          this._pendingSkillInject = { metadata: parsed, content };
-          console.log(C.info(`  Skill "${installed[0].name}" will be injected into your next message.`));
+          // Parse skill metadata from YAML frontmatter
+          const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+          const metadata = {
+            name: 'custom-skill',
+            description: '',
+            version: '1.0.0',
+            tags: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          if (frontmatterMatch) {
+            const frontmatter = frontmatterMatch[1];
+            const parseField = (field: string): string => {
+              const match = frontmatter.match(new RegExp(`${field}:\\s*(.+)`));
+              return match ? match[1].trim() : '';
+            };
+            const parseArray = (field: string): string[] => {
+              const raw = parseField(field);
+              if (!raw) return [];
+              return raw.split(',').map((s) => s.trim()).filter(Boolean);
+            };
+            const name = parseField('name');
+            if (name) metadata.name = name;
+            metadata.description = parseField('description');
+            const version = parseField('version');
+            if (version) metadata.version = version;
+            metadata.tags = parseArray('tags');
+            const author = parseField('author');
+            if (author) metadata.author = author;
+          }
+          this._pendingSkillInject = { metadata, content };
+          console.log(C.info(`  Skill "${metadata.name}" will be injected into your next message.`));
         } else {
           await this.skillRegistry!.initialize();
           const skill = await this.skillRegistry!.get(installed[0].name);

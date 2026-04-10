@@ -1313,8 +1313,8 @@ export class InkBasedRepl {
     // Ask scope: Global (G) or Local session (L)
     console.log('');
     console.log(chalk.dim('  Install scope:'));
-    console.log(chalk.hex('#3B82F6')('    G') + chalk.dim(' — Global (available in all sessions)'));
-    console.log(chalk.hex('#3B82F6')('    L') + chalk.dim(' — Current session only'));
+    console.log(chalk.hex('#3B82F6')('    G') + chalk.dim(' — Global (永久保存，所有会话可用)'));
+    console.log(chalk.hex('#3B82F6')('    L') + chalk.dim(' — Session (仅当前会话使用)'));
     console.log('');
 
     const scope = await this.promptInput('  Scope (G/L): ');
@@ -1326,7 +1326,6 @@ export class InkBasedRepl {
 
     try {
       const { SkillInstaller } = await import('../../../core/src/extensions/SkillInstaller.js');
-      const { SkillValidator } = await import('../../../core/src/extensions/SkillValidator.js');
       const installer = new SkillInstaller();
 
       let installed;
@@ -1340,10 +1339,38 @@ export class InkBasedRepl {
         console.log(chalk.green(`  ✓ Installed "${installed[0].name}" successfully.`));
         if (!isGlobal) {
           const content = fs.readFileSync(path.join(installed[0].path, 'SKILL.md'), 'utf-8');
-          const validator = new SkillValidator();
-          const parsed = validator.parse(content);
-          this._pendingSkillInject = { metadata: parsed, content };
-          console.log(chalk.hex('#3B82F6')(`  Skill "${installed[0].name}" will be injected into your next message.`));
+          // Parse skill metadata from YAML frontmatter
+          const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+          const metadata = {
+            name: 'custom-skill',
+            description: '',
+            version: '1.0.0',
+            tags: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          if (frontmatterMatch) {
+            const frontmatter = frontmatterMatch[1];
+            const parseField = (field: string): string => {
+              const match = frontmatter.match(new RegExp(`${field}:\\s*(.+)`));
+              return match ? match[1].trim() : '';
+            };
+            const parseArray = (field: string): string[] => {
+              const raw = parseField(field);
+              if (!raw) return [];
+              return raw.split(',').map((s) => s.trim()).filter(Boolean);
+            };
+            const name = parseField('name');
+            if (name) metadata.name = name;
+            metadata.description = parseField('description');
+            const version = parseField('version');
+            if (version) metadata.version = version;
+            metadata.tags = parseArray('tags');
+            const author = parseField('author');
+            if (author) metadata.author = author;
+          }
+          this._pendingSkillInject = { metadata, content };
+          console.log(chalk.hex('#3B82F6')(`  Skill "${metadata.name}" will be injected into your next message.`));
         } else {
           await this.skillRegistry!.initialize();
           const skill = await this.skillRegistry!.get(installed[0].name);
