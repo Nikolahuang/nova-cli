@@ -58,7 +58,7 @@ export class SkillInstaller {
     try {
       // Clone repository
       console.log(`  Cloning repository...`);
-      execSync(`git clone --depth 1 ${repoUrl} "${tempDir}"`, { stdio: 'pipe' });
+      execSync(`git clone ${repoUrl} "${tempDir}"`, { stdio: 'pipe' });
 
       // Find skills directory
       const skillsDir = this.findSkillsDirectory(tempDir);
@@ -278,7 +278,11 @@ export class SkillInstaller {
       const content = fs.readFileSync(resolvedPath, 'utf-8');
       const nameMatch = content.match(/^name:\s*(.+)$/m);
       skillName = nameMatch ? nameMatch[1].trim().replace(/\s+/g, '-').toLowerCase() : 'custom-skill';
-      skillDir = path.dirname(resolvedPath);
+      
+      // Create a temporary directory for this single file
+      skillDir = path.join(os.tmpdir(), `nova-skill-temp-${Date.now()}`);
+      fs.mkdirSync(skillDir, { recursive: true });
+      fs.writeFileSync(path.join(skillDir, 'SKILL.md'), content);
     } else {
       // It's a directory - look for SKILL.md inside
       const skillMd = path.join(resolvedPath, 'SKILL.md');
