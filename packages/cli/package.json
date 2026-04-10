@@ -1,6 +1,6 @@
 {
   "name": "iflow4nova",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Nova CLI - Next-generation AI-powered terminal assistant with multimodal capabilities",
   "type": "module",
   "bin": {
@@ -76,11 +76,12 @@
     "diff": "^5.2.0",
     "duck-duck-scrape": "^2.2.7",
     "glob": "^10.3.0",
+    "iflow4nova-core": "^0.4.0",
     "ignore": "^5.3.0",
-    "inquirer": "^9.2.0",
     "ink": "^4.4.1",
     "ink-spinner": "^5.0.0",
     "ink-text-input": "^5.0.1",
+    "inquirer": "^9.2.0",
     "json-schema": "^0.4.0",
     "mime-types": "^2.1.35",
     "open": "^10.1.0",
@@ -94,8 +95,7 @@
     "uuid": "^9.0.0",
     "yaml": "^2.4.0",
     "yargs": "^17.7.0",
-    "zod": "^3.22.0",
-    "iflow4nova-core": "^0.4.0"
+    "zod": "^3.22.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
