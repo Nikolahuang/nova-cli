@@ -2275,7 +2275,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
 
     // Mode 3: /skills user — Install skill from custom file/zip path
     if (mode === 'user') {
-      await this.handleSkillsUserCommand();
+      await this.handleSkillsUserCommand(rest);
       return;
     }
 
@@ -2671,7 +2671,7 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
   // /skills user — Install skill from custom file/zip path
   // ========================================================================
 
-  private async handleSkillsUserCommand(): Promise<void> {
+  private async handleSkillsUserCommand(pathArg?: string): Promise<void> {
     console.log('');
     console.log(C.brand('  Install Skill from File'));
     console.log(C.dim('  ' + BOX.h.repeat(58)));
@@ -2679,7 +2679,16 @@ ${((scan.topLevel as string[]) || []).slice(0, 20).join('\n')}
     console.log(C.dim('  Supported: SKILL.md file, .zip archive containing SKILL.md'));
     console.log('');
 
-    const skillPath = await this.promptInput('  Path: ');
+    let skillPath: string | undefined;
+    
+    // Use provided path argument if available, otherwise prompt for input
+    if (pathArg && pathArg.trim()) {
+      skillPath = pathArg.trim();
+      console.log(C.muted(`  Using path: ${skillPath}`));
+    } else {
+      skillPath = await this.promptInput('  Path: ');
+    }
+    
     if (!skillPath || !skillPath.trim()) {
       console.log(C.muted('  Cancelled.'));
       return;

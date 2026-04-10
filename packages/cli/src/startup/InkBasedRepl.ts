@@ -122,12 +122,12 @@ const BOX = {
   spinner: ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'],
 };
 
-const MODE_LABELS: Record<InteractionMode, { label: string; color: any; description: string; approvalMode: string }> = {
-  auto:  { label: 'AUTO',  color: chalk.green.bold,  description: 'Full autonomous - no approval needed',       approvalMode: 'yolo' },
-  smart: { label: 'SMART', color: chalk.blue.bold,   description: 'Smart approval - auto low-risk, ask high-risk', approvalMode: 'smart' },
-  edits: { label: 'EDITS', color: chalk.magenta.bold,description: 'Auto-approve file edits, ask for shell/exec', approvalMode: 'accepting_edits' },
-  plan:  { label: 'PLAN',  color: chalk.yellow.bold, description: 'Plan first, then confirm each action',       approvalMode: 'plan' },
-  ask:   { label: 'ASK',   color: chalk.cyan.bold,   description: 'Answer only, no file changes',              approvalMode: 'default' },
+const MODE_LABELS: Record<InteractionMode, { label: string; color: any; description: string; approvalMode: string; icon: string }> = {
+  auto:  { label: 'AUTO',  color: chalk.green.bold,  description: 'Full autonomous - no approval needed',       approvalMode: 'yolo',  icon: '●' },
+  smart: { label: 'SMART', color: chalk.blue.bold,   description: 'Smart approval - auto low-risk, ask high-risk', approvalMode: 'smart', icon: '◆' },
+  edits: { label: 'EDITS', color: chalk.magenta.bold,description: 'Auto-approve file edits, ask for shell/exec', approvalMode: 'accepting_edits', icon: '◇' },
+  plan:  { label: 'PLAN',  color: chalk.yellow.bold, description: 'Plan first, then confirm each action',       approvalMode: 'plan',  icon: '◆' },
+  ask:   { label: 'ASK',   color: chalk.cyan.bold,   description: 'Answer only, no file changes',              approvalMode: 'default', icon: '◉' },
 };
 
 const MODES: InteractionMode[] = ['auto', 'smart', 'edits', 'plan', 'ask'];
@@ -359,21 +359,19 @@ export class InkBasedRepl {
     const modeInfo = MODE_LABELS[this.state.mode];
 
     console.log('');
-    console.log(chalk.hex('#7C3AED')(BOX.tl) + hrThick + chalk.hex('#7C3AED')(BOX.tr));
+    console.log(chalk.hex('#7C3AED')('╭') + hrThick + chalk.hex('#7C3AED')('╮'));
     
-    // Logo
-    console.log(vl + chalk.hex('#7C3AED').bold('  NOVA ') + 
-                chalk.hex('#A78BFA')('CLI') + 
-                chalk.dim(' · AI-powered terminal assistant') + ' '.repeat(24) + vl);
+    // Logo (exact iFlow CLI style)
+    console.log(vl + '  NOVA CLI · AI-powered terminal assistant' + ' '.repeat(29) + vl);
     
-    console.log(chalk.hex('#7C3AED')(BOX.ht) + hr + chalk.hex('#7C3AED')(BOX.htr));
+    console.log(chalk.hex('#7C3AED')('├') + hr + chalk.hex('#7C3AED')('┤'));
 
-    // Status line
-    console.log(vl + '  Model: ' + chalk.white(modelShort) + ' '.repeat(Math.max(0, 52 - modelShort.length)) + vl);
-    console.log(vl + '  Mode:  ' + modeInfo.color(modeInfo.label) + ' '.repeat(52) + vl);
-    console.log(vl + '  Dir:   ' + chalk.gray(this.cwd.slice(-50)) + ' '.repeat(Math.max(0, 52 - Math.min(50, this.cwd.length))) + vl);
+    // Status lines (exact iFlow CLI style)
+    console.log(vl + '  Model: ' + modelShort + ' '.repeat(Math.max(0, 62 - modelShort.length)) + vl);
+    console.log(vl + '  Mode:  ' + modeInfo.icon + ' ' + modeInfo.label + ' '.repeat(Math.max(0, 61 - modeInfo.label.length)) + vl);
+    console.log(vl + '  Dir:   ' + this.cwd.slice(-60) + ' '.repeat(Math.max(0, 62 - Math.min(60, this.cwd.length))) + vl);
 
-    console.log(chalk.hex('#7C3AED')(BOX.bl) + hrThick + chalk.hex('#7C3AED')(BOX.br));
+    console.log(chalk.hex('#7C3AED')('╰') + hrThick + chalk.hex('#7C3AED')('╯'));
     console.log('');
   }
 
@@ -381,7 +379,8 @@ export class InkBasedRepl {
     const modeInfo = MODE_LABELS[this.state.mode];
     const modelShort = this.modelClient.getModel().split('/').pop() || this.modelClient.getModel();
     
-    const modeBadge = modeInfo.color(`[${modeInfo.label}]`);
+    // Exact iFlow CLI prompt style: [◉ MODE] model ›
+    const modeBadge = modeInfo.color(`[${modeInfo.icon} ${modeInfo.label}]`);
     const ctxStr = this.state.contextUsage > 0 ? 
       chalk.dim(` (${this.state.contextUsage}% ctx)`) : '';
     
@@ -848,7 +847,7 @@ export class InkBasedRepl {
 
     // Mode 3: /skills user — Install skill from custom file/zip path
     if (mode === 'user') {
-      await this.handleSkillsUserCommand();
+      await this.handleSkillsUserCommand(rest);
       return;
     }
 
@@ -1280,7 +1279,7 @@ export class InkBasedRepl {
   // /skills user — Install skill from custom file/zip path
   // ========================================================================
 
-  private async handleSkillsUserCommand(): Promise<void> {
+  private async handleSkillsUserCommand(pathArg?: string): Promise<void> {
     const fs = await import('fs');
     const path = await import('path');
 
@@ -1290,7 +1289,16 @@ export class InkBasedRepl {
     console.log(chalk.dim('  Supported: SKILL.md file, .zip archive containing SKILL.md'));
     console.log('');
 
-    const skillPath = await this.promptInput('  Path: ');
+    let skillPath: string | undefined;
+    
+    // Use provided path argument if available, otherwise prompt for input
+    if (pathArg && pathArg.trim()) {
+      skillPath = pathArg.trim();
+      console.log(chalk.dim(`  Using path: ${skillPath}`));
+    } else {
+      skillPath = await this.promptInput('  Path: ');
+    }
+    
     if (!skillPath || !skillPath.trim()) {
       console.log(chalk.dim('  Cancelled.'));
       return;
@@ -1856,8 +1864,7 @@ export class InkBasedRepl {
     // Start active cursor (purple circle animation)
     this.activeCursor.start();
 
-    // Show compact execution status header
-    this.showExecutionHeader();
+    // Don't show execution header (iFlow CLI style - just start output)
 
     // Create agent loop
     this.currentLoop = new AgentLoop({
@@ -2164,7 +2171,7 @@ export class InkBasedRepl {
    * Show compact execution status header
    */
   private showExecutionHeader(): void {
-    console.log(chalk.dim('    ┌─ 执行开始 ' + '─'.repeat(40)));
+    // No decorative frame, just start output directly (iFlow CLI style)
   }
 
   /**
